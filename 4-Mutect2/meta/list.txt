@@ -1,0 +1,1 @@
+HG00096	/mnt/e/Scientifc_software/TT/example/HG00096.chrM.bam
