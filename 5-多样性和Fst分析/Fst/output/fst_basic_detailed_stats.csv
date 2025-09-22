@@ -1,0 +1,7 @@
+"Population1","Population2","Fst","P_value","CI_lower","CI_upper","Significant"
+"Mongol_Zavkhan(Oversea)","Mongol_Khovd(Oversea)",0.0109506870335495,NA,NA,NA,FALSE
+"Mongol_Zavkhan(Oversea)","Balochi_Pakistan(Oversea)",0.0121549237742068,NA,NA,NA,FALSE
+"Mongol_Zavkhan(Oversea)","Kalash_Pakistan(Oversea)",0.0937591134441528,NA,NA,NA,FALSE
+"Mongol_Khovd(Oversea)","Balochi_Pakistan(Oversea)",0.00175502299685293,NA,NA,NA,FALSE
+"Mongol_Khovd(Oversea)","Kalash_Pakistan(Oversea)",0.101470769991348,NA,NA,NA,FALSE
+"Balochi_Pakistan(Oversea)","Kalash_Pakistan(Oversea)",0.0862613868748838,NA,NA,NA,FALSE
