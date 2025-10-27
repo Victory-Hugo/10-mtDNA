@@ -32,8 +32,8 @@
 
 PYTHON3="/home/luolintao/miniconda3/envs/pyg/bin/python3" #todo 替换为python解释器
 SRC_DIR="/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/2-母系专用/"  #todo 替换为/2-母系专用 绝对路径
-ID_HAP_TXT="/mnt/f/10_姜雨彤_高原研究/0-统计基本信息/meta/ID_Hap.txt" # todo 第一列为ID，第二列为单倍群全称，列名为ID Haplogroup，制表符分割
-OUT_DIR="/mnt/f/10_姜雨彤_高原研究/0-统计基本信息/meta/" #todo 输出文件路径
+ID_HAP_TXT="/mnt/f/4_20K_CPGDP/0-DAPC/conf/ID_Hap.txt" # todo 第一列为ID，第二列为单倍群全称，列名为ID Haplogroup，制表符分割
+OUT_DIR="/mnt/f/4_20K_CPGDP/0-DAPC/meta/" #todo 输出文件路径
 
 
 # *请勿修改下列内容

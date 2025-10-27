@@ -23,7 +23,7 @@
 PYTHON3="/home/luolintao/miniconda3/envs/pyg/bin/python3" #todo 替换为python解释器
 PYTHON_SRC="/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/2-母系专用/python/python：Excel→ID_Hap.py"
 EXCEL_PATH="/mnt/f/OneDrive/文档（共享）/2_mtDNA/线粒体_现代DNA83.xlsx"
-OUT="/mnt/f/10_姜雨彤_高原研究/0-统计基本信息/meta/ID_Hap.txt"
+OUT="/mnt/f/4_20K_CPGDP/0-DAPC/conf/ID_Hap.txt"
 
 "$PYTHON3" \
     "$PYTHON_SRC" \
