@@ -1,0 +1,13 @@
+// pyrightconfig.json
+{
+  // ✅ 要让 Pyright 分析的源码目录
+  // 这里只包含主要文件夹，其它目录将被忽略。
+  "include": [
+    "script",
+    "src",
+    "pipe",
+    "notebooks",
+    "venv",
+    ".venv"
+  ]
+}
