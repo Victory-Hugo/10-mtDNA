@@ -11,3 +11,6 @@
 
 # nohup 默认会生成的输出文件
 nohup.out
+
+# 忽略7-单倍群分型/1-HaploCart/data/
+/7-单倍群分型/1-HaploCart/data/*

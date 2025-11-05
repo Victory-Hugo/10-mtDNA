@@ -1,0 +1,10 @@
+/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/1-HaploCart/example/JX152892.fasta
+/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/1-HaploCart/example/JX152895.fasta
+/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/1-HaploCart/example/JX152896.fasta
+/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/1-HaploCart/example/JX152901.fasta
+/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/1-HaploCart/example/JX152903.fasta
+/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/1-HaploCart/example/JX152904.fasta
+/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/1-HaploCart/example/JX152907.fasta
+/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/1-HaploCart/example/JX152913.fasta
+/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/1-HaploCart/example/JX152923.fasta
+/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/1-HaploCart/example/JX152996.fasta
