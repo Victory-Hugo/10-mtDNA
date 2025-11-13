@@ -30,10 +30,10 @@
 #!/bin/bash
 # todo conda install pandas
 
-PYTHON3="/home/luolintao/miniconda3/envs/pyg/bin/python3" #todo 替换为python解释器
+PYTHON3="/home/luolintao/miniconda3/envs/BigLin/bin/python3" #todo 替换为python解释器
 SRC_DIR="/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/2-母系专用/"  #todo 替换为/2-母系专用 绝对路径
-ID_HAP_TXT="/mnt/f/4_20K_CPGDP/0-DAPC/conf/ID_Hap.txt" # todo 第一列为ID，第二列为单倍群全称，列名为ID Haplogroup，制表符分割
-OUT_DIR="/mnt/f/4_20K_CPGDP/0-DAPC/meta/" #todo 输出文件路径
+ID_HAP_TXT="/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/2-母系专用/example/ID_Hap.txt" # todo 第一列为ID，第二列为单倍群全称，列名为ID Haplogroup，制表符分割
+OUT_DIR="/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/2-母系专用/example/output/" #todo 输出文件路径
 
 
 # *请勿修改下列内容
@@ -63,4 +63,14 @@ OUT_DIR="/mnt/f/4_20K_CPGDP/0-DAPC/meta/" #todo 输出文件路径
   --out-not-found "${OUT_DIR}/没有查询到请核实.txt" \
   --out-final "${OUT_DIR}/最终_LLT.txt" \
   --out-unmatched "${OUT_DIR}/无法处理.txt"
+
+# *补齐至下游单倍群
+echo "正在补齐至下游单倍群..."
+"${PYTHON3}" "${SRC_DIR}/python/python：正序等级补齐至下游.py"
+
+# *按首字母调整等级
+echo "正在按首字母调整等级..."
+"${PYTHON3}" "${SRC_DIR}/python/python：按首字母调整等级.py"
+
+echo "全部流程运行完毕 ✅"
 

@@ -72,27 +72,41 @@ def output_level_tables(id_hap: pd.DataFrame,
                         not_found_file: Path) -> None:
     """
     生成 Level_0..n / Level_n..0 两个表 + 未找到列表
+    只输出包含数据的列，不输出全空列
     """
     id_hap = id_hap.copy()
     id_hap["lineage"] = id_hap["Haplogroup"].map(lineage_func)
-    max_len = id_hap["lineage"].str.len().max()
 
-    level_cols_fwd = [f"Level_{i}" for i in range(max_len)]
-    level_cols_rev = [f"Level_{i}" for i in range(max_len-1, -1, -1)]
-
-    def pad(seq: tuple[str, ...]) -> list[str]:
-        seq = list(seq)
-        return seq + [""] * (max_len - len(seq))
-
-    id_hap[level_cols_fwd] = id_hap["lineage"].apply(lambda x: pd.Series(pad(x)))
-    id_hap[level_cols_rev] = id_hap["lineage"].apply(lambda x: pd.Series(pad(tuple(reversed(x)))))
+    # 为每个样本创建正序和逆序的行
+    forward_rows = []
+    reverse_rows = []
+    
+    for _, row in id_hap.iterrows():
+        lineage = row["lineage"]
+        fwd = [row["ID"]] + list(lineage)
+        rev = [row["ID"]] + list(reversed(lineage))
+        
+        forward_rows.append(fwd)
+        reverse_rows.append(rev)
+    
+    # 找到最长的行
+    max_fwd_len = max(len(row) for row in forward_rows)
+    max_rev_len = max(len(row) for row in reverse_rows)
+    
+    # 生成列名
+    level_cols_fwd = ["ID"] + [f"Level_{i}" for i in range(max_fwd_len - 1)]
+    level_cols_rev = ["ID"] + [f"Level_{i}" for i in range(max_rev_len - 1)]
+    
+    # 创建 DataFrame 并只保留需要的列数
+    df_fwd = pd.DataFrame(forward_rows, columns=level_cols_fwd[:max_fwd_len])
+    df_rev = pd.DataFrame(reverse_rows, columns=level_cols_rev[:max_rev_len])
 
     forward_file.parent.mkdir(parents=True, exist_ok=True)
     reverse_file.parent.mkdir(parents=True, exist_ok=True)
     not_found_file.parent.mkdir(parents=True, exist_ok=True)
 
-    id_hap[["ID"] + level_cols_fwd].to_csv(forward_file,  sep='\t', index=False)
-    id_hap[["ID"] + level_cols_rev].to_csv(reverse_file,  sep='\t', index=False)
+    df_fwd.to_csv(forward_file,  sep='\t', index=False)
+    df_rev.to_csv(reverse_file,  sep='\t', index=False)
 
     # 未找到：lineage 为空
     missed = id_hap[id_hap["lineage"].str.len() == 0][["ID", "Haplogroup"]]
