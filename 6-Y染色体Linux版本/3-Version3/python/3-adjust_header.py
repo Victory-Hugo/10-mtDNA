@@ -93,9 +93,13 @@ def process_by_first_letter(id_hap_file: Path,
     column_names = level_df.columns.tolist()
     result_df = pd.DataFrame(result_rows, columns=column_names)
     
+    # 重新命名表头为指定格式: sample_id, hap_level_1, hap_level_2, ...
+    new_column_names = ['sample_id'] + [f'hap_level_{i}' for i in range(1, len(column_names))]
+    result_df.columns = new_column_names
+    
     # 保存结果
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    result_df.to_csv(output_file, sep='\t', index=False)
+    result_df.to_csv(output_file, sep=',', index=False)
     
     print(f"✅ 完成: {output_file}")
     print(f"   - ID信息文件: {id_hap_file}")
