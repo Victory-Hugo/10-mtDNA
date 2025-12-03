@@ -14,3 +14,8 @@ nohup.out
 
 # 忽略7-单倍群分型/1-HaploCart/data/
 /7-单倍群分型/1-HaploCart/data/*
+
+# 忽略HaploGrouper目录中的超大文件
+/7-单倍群分型/3-HaploGrouper/data/*
+/7-单倍群分型/3-HaploGrouper/input/*.vcf
+/7-单倍群分型/3-HaploGrouper/input/*.vcf.gz
