@@ -1,0 +1,2 @@
+ID	Haplogroup	netScore	matchScore	mismatchScore	mismatchLoci	backMutCnt	pruning	allMaxNetScore
+HG00096	R1b1a2a1a2c1k1	698	698	0		0		R1b1a2a1a2c1k1[698-0]
