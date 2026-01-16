@@ -39,6 +39,7 @@ WHOLE_GENOME_REFERENCE_DICT="${REF_DIR}/GCA_000001405.15_GRCh38_no_alt_analysis_
 
 # 通用参数定义
 JAVA_OPT="-Xmx64g -DGATK_STACKTRACE_ON_USER_EXCEPTION=true"
+PICARD="/usr/bin/java -jar /4-Mutect2/bin/picard.jar"
 THREADS=16
 # ==================================================
 
