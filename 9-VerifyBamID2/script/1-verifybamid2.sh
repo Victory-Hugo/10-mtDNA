@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-script_name="1-verifybamid2.sh"
-base_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+#! conda install -c bioconda verifybamid2
+
+base_dir="/mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/9-VerifyBamID2/"
 config_path="${base_dir}/conf/verifybamid2.yml"
 config_loader="${base_dir}/python/load_script_config.py"
 
@@ -70,7 +71,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 mkdir -p "$log_dir" "$tmp_dir" "$output_dir"
-log_file="${log_dir}/${script_name}.log"
+log_file="${log_dir}/1-verifybamid2.log"
 
 {
   echo "$(date -Is)\tSTART"

@@ -1,7 +1,7 @@
 verifybamid2:
   binary: verifybamid2
   conda_env: BigLin
-  reference: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/9-VerifyBamID2/data/reference/GRCh38_chr1-22XYM.v1.fa
+  reference: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/4-Mutect2/conf/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta
   reference_build: hg38
   svd_prefix: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/9-VerifyBamID2/resource/1000g.phase3.10k.b38.vcf.gz.dat
   panel_build: hg38
