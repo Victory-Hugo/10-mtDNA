@@ -32,7 +32,7 @@ done < "${SUCCESS_LOG}"
 
 # 单个样本处理函数
 process_sample() {
-    local base_name bam_file
+    local base_name bam_file cram_index
     base_name="$1"
     bam_file="$2"
 
@@ -48,9 +48,16 @@ process_sample() {
     mkdir -p "${SAMPLE_OUT}"
 
     # ---- 先抽取chrM再补RG（避免对全基因组BAM做RG）----
+    if [[ "${bam_file}" == *.cram ]]; then
+        cram_index="${bam_file}.crai"
+        if [[ ! -f "${cram_index}" ]]; then
+            samtools index -@ ${THREADS} "${bam_file}"
+        fi
+    fi
     mkdir -p "${TMP_DIR}"
     TMP_CHRM="${TMP_DIR}/${base_name}.chrM.bam"
-    samtools view -@ ${THREADS} -b "${bam_file}" chrM -o "${TMP_CHRM}"
+    samtools view -@ ${THREADS} -b -T "${WHOLE_GENOME_REFERENCE}" \
+        "${bam_file}" chrM -o "${TMP_CHRM}"
     TMP_BAM="${TMP_DIR}/${base_name}.chrM.rg.bam"
     samtools addreplacerg -@ ${THREADS} \
         -r "ID:${base_name}\tSM:${base_name}\tPL:illumina\tLB:lib1\tPU:unit1" \
