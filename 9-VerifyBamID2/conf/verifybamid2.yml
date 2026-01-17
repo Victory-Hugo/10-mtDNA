@@ -1,0 +1,23 @@
+verifybamid2:
+  binary: verifybamid2
+  conda_env: BigLin
+  reference: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/9-VerifyBamID2/data/reference/GRCh38_chr1-22XYM.v1.fa
+  reference_build: hg38
+  svd_prefix: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/9-VerifyBamID2/resource/1000g.phase3.10k.b38.vcf.gz.dat
+  panel_build: hg38
+  num_pc: 2
+  num_thread: 4
+  disable_sanity_check: true
+  output_pileup: false
+  known_af: ""
+  extra_args: []
+
+script:
+  config_path: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/9-VerifyBamID2/conf/verifybamid2.yml
+  list_path: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/9-VerifyBamID2/meta/list.txt
+  output_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/9-VerifyBamID2/output
+  log_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/9-VerifyBamID2/log
+  tmp_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/9-VerifyBamID2/tmp
+  python_bin: python3
+  jobs: 4
+  force: false

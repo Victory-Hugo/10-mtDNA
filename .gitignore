@@ -19,3 +19,6 @@ nohup.out
 /7-单倍群分型/3-HaploGrouper/data/*
 /7-单倍群分型/3-HaploGrouper/input/*.vcf
 /7-单倍群分型/3-HaploGrouper/input/*.vcf.gz
+
+
+/9-VerifyBamID2/data/*
