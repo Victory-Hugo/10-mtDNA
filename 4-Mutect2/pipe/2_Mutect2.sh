@@ -8,7 +8,7 @@ REF_DIR="${BASE_DIR}/conf"
 OUT_DIR="/mnt/d/5-NCBI-Reference/3-Human/example/output_mutect2/"  # 基础输出目录
 LOG_DIR="${OUT_DIR}/logs"
 SUCCESS_LOG="${LOG_DIR}/success.log"
-
+TMP_DIR="${OUT_DIR}/tmp"
 # 参考基因组及其字典定义
 WHOLE_GENOME_REFERENCE="${REF_DIR}/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta"
 WHOLE_GENOME_REFERENCE_DICT="${REF_DIR}/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta.dict"
@@ -54,10 +54,20 @@ process_sample() {
     SAMPLE_OUT="${OUT_DIR}/${base_name}"
     mkdir -p "${SAMPLE_OUT}"
 
+    # ---- 先抽取chrM再补RG（避免对全基因组BAM做RG）----
+    TMP_DIR="/mnt/d/tmp"
+    mkdir -p "${TMP_DIR}"
+    TMP_CHRM="${TMP_DIR}/${base_name}.chrM.bam"
+    samtools view -@ ${THREADS} -b "${bam_file}" chrM -o "${TMP_CHRM}"
+    TMP_BAM="${TMP_DIR}/${base_name}.chrM.rg.bam"
+    samtools addreplacerg -@ ${THREADS} \
+        -r "ID:${base_name}\tSM:${base_name}\tPL:illumina\tLB:lib1\tPU:unit1" \
+        -o "${TMP_BAM}" "${TMP_CHRM}"
+
     # ---- 原始数据处理 ----
+    # TMP_BAM 已只含 chrM，避免 -L 触发索引要求
     gatk --java-options "${JAVA_OPT}" PrintReads \
-        -I "$bam_file" \
-        -L chrM \
+        -I "${TMP_BAM}" \
         --read-filter MateOnSameContigOrNoMappedMateReadFilter \
         --read-filter MateUnmappedAndUnmappedReadFilter \
         -O "${SAMPLE_OUT}/${base_name}.chrM.bam"
@@ -88,6 +98,12 @@ process_sample() {
     bgzip -f -@ ${THREADS} "${SAMPLE_OUT}/${base_name}.chrM.ncr.reform.vcf"
     bcftools index --threads ${THREADS} -f -t \
         "${SAMPLE_OUT}/${base_name}.chrM.ncr.reform.vcf.gz"
+
+    # 补齐contig长度，避免与liftover后的VCF字典不一致
+    gatk UpdateVCFSequenceDictionary \
+        -V "${SAMPLE_OUT}/${base_name}.chrM.ncr.reform.vcf.gz" \
+        -O "${SAMPLE_OUT}/${base_name}.chrM.ncr.reform.dict.vcf.gz" \
+        --sequence-dictionary "${REF_DIR}/chrM_rCRS.dict"
 
     # ---- 数据重处理流程 ----
     gatk RevertSam \
@@ -151,7 +167,7 @@ process_sample() {
         R="${REF_DIR}/chrM_rCRS.fasta"
 
     ${PICARD} MergeVcfs \
-        I="${SAMPLE_OUT}/${base_name}.chrM.ncr.reform.vcf.gz" \
+        I="${SAMPLE_OUT}/${base_name}.chrM.ncr.reform.dict.vcf.gz" \
         I="${SAMPLE_OUT}/${base_name}.chrM.cr.liftover.vcf.gz" \
         D="${WHOLE_GENOME_REFERENCE_DICT}" \
         O="${SAMPLE_OUT}/${base_name}.chrM.raw.vcf.gz"
@@ -172,10 +188,13 @@ process_sample() {
             echo "${base_name}" >> "${SUCCESS_LOG}"
         fi
     } 9>>"${SUCCESS_LOG}"
+
+    # ---- 成功后清理临时BAM ----
+    rm -f "${TMP_BAM}" "${TMP_BAM}.bai" "${TMP_CHRM}"
 }
 
 export -f process_sample
-export TT_DIR REF_DIR OUT_DIR WHOLE_GENOME_REFERENCE WHOLE_GENOME_REFERENCE_DICT JAVA_OPT THREADS LOG_DIR SUCCESS_LOG PICARD
+export REF_DIR OUT_DIR WHOLE_GENOME_REFERENCE WHOLE_GENOME_REFERENCE_DICT JAVA_OPT THREADS LOG_DIR SUCCESS_LOG PICARD
 
 # 使用 GNU parallel 并行处理
 # --colsep 指定分隔符（这里使用制表符或空白字符都可），: ::: 不行，因为我们需要从文件读取
