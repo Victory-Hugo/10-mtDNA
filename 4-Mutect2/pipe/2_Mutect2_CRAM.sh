@@ -18,9 +18,6 @@ source "${CONF_FILE}"
 #     R="${WHOLE_GENOME_REFERENCE}" \
 #     O="${WHOLE_GENOME_REFERENCE_DICT}"
 
-
-
-
 mkdir -p "${LOG_DIR}"
 touch "${SUCCESS_LOG}"
 
@@ -59,7 +56,7 @@ process_sample() {
     samtools view -@ ${THREADS} -b -T "${WHOLE_GENOME_REFERENCE}" \
         "${bam_file}" chrM -o "${TMP_CHRM}"
     TMP_BAM="${TMP_DIR}/${base_name}.chrM.rg.bam"
-    samtools addreplacerg -@ ${THREADS} \
+    samtools addreplacerg -w -@ ${THREADS} \
         -r "ID:${base_name}\tSM:${base_name}\tPL:illumina\tLB:lib1\tPU:unit1" \
         -o "${TMP_BAM}" "${TMP_CHRM}"
 
@@ -102,7 +99,8 @@ process_sample() {
     gatk UpdateVCFSequenceDictionary \
         -V "${SAMPLE_OUT}/${base_name}.chrM.ncr.reform.vcf.gz" \
         -O "${SAMPLE_OUT}/${base_name}.chrM.ncr.reform.dict.vcf.gz" \
-        --sequence-dictionary "${REF_DIR}/chrM_rCRS.dict"
+        --sequence-dictionary "${REF_DIR}/chrM_rCRS.dict" \
+        --replace true
 
     # ---- 数据重处理流程 ----
     gatk RevertSam \
@@ -193,7 +191,8 @@ process_sample() {
 }
 
 export -f process_sample
-export REF_DIR OUT_DIR WHOLE_GENOME_REFERENCE WHOLE_GENOME_REFERENCE_DICT JAVA_OPT THREADS LOG_DIR SUCCESS_LOG PICARD
+export REF_DIR OUT_DIR WHOLE_GENOME_REFERENCE WHOLE_GENOME_REFERENCE_DICT JAVA_OPT THREADS LOG_DIR SUCCESS_LOG PICARD TMP_DIR
+
 
 # 使用 GNU parallel 并行处理
 # --colsep 指定分隔符（这里使用制表符或空白字符都可），: ::: 不行，因为我们需要从文件读取
