@@ -1,1 +1,6 @@
-HG00096	/mnt/e/Scientifc_software/TT/example/HG00096.chrM.bam
+HG001	/mnt/d/5-NCBI-Reference/3-Human/example/HG001.bam
+HG002	/mnt/d/5-NCBI-Reference/3-Human/example/HG002_5X.bam
+HG003	/mnt/d/5-NCBI-Reference/3-Human/example/HG003_5X.bam
+HG004	/mnt/d/5-NCBI-Reference/3-Human/example/HG004_5X.bam
+HG005	/mnt/d/5-NCBI-Reference/3-Human/example/HG005_5X.bam
+HG006	/mnt/d/5-NCBI-Reference/3-Human/example/HG006_5X.bam

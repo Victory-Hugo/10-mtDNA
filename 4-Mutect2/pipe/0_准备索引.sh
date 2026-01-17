@@ -2,8 +2,8 @@
 set -euo pipefail  # 严格模式：任何错误都终止脚本
 
 # ------------------ 路径变量定义 ------------------
-REF_DIR="/mnt/e/Scientifc_software/TT/Reference"
-GATK="/mnt/e/Scientifc_software/gatk-4.4.0.0/gatk"
+REF_DIR="/mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/4-Mutect2/conf"
+GATK="gatk"
 
 ORIG_FASTA="${REF_DIR}/chrM_rCRS.fasta"
 SHIFTED_FASTA="${REF_DIR}/chrM_rCRS.shifted.fa"
@@ -11,7 +11,7 @@ SHIFT_CHAIN="${REF_DIR}/chrM_rCRS.shift_back.chain"
 
 ORIG_DICT="${REF_DIR}/chrM_rCRS.dict"
 SHIFTED_DICT="${REF_DIR}/chrM_rCRS.shifted.dict"
-
+PICARD="/usr/bin/java -jar /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/4-Mutect2/bin/picard.jar"
 # ------------------ 文件检查与清理 ------------------
 echo "清理旧的索引文件和字典文件（如存在）..."
 
@@ -29,7 +29,7 @@ echo "创建原始参考序列索引..."
 samtools faidx "${ORIG_FASTA}"
 
 echo "创建原始参考序列字典..."
-picard CreateSequenceDictionary \
+${PICARD} CreateSequenceDictionary \
     R="${ORIG_FASTA}" \
     O="${ORIG_DICT}"
 
@@ -45,7 +45,7 @@ echo "创建 shifted FASTA 的 BWA 索引..."
 bwa index "${SHIFTED_FASTA}"
 
 echo "创建 shifted FASTA 的字典..."
-picard CreateSequenceDictionary \
+${PICARD} CreateSequenceDictionary \
     R="${SHIFTED_FASTA}" \
     O="${SHIFTED_DICT}"
 
