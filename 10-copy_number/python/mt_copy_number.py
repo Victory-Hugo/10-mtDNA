@@ -200,6 +200,14 @@ def should_skip(log_path: str) -> bool:
     return False
 
 
+def append_success_log(success_log: Optional[str], sample_id: str) -> None:
+    if not success_log:
+        return
+    os.makedirs(os.path.dirname(success_log), exist_ok=True)
+    with open(success_log, "a", encoding="utf-8") as handle:
+        handle.write(f"{sample_id}\n")
+
+
 def run(
     sample_id: str,
     bam_path: str,
@@ -209,6 +217,8 @@ def run(
     tmp_dir: str,
     samtools: str = "samtools",
     mosdepth: str = "mosdepth",
+    mosdepth_threads: int = 4,
+    success_log: Optional[str] = None,
     force: bool = False,
 ) -> None:
     logger = setup_logger(log_path)
@@ -239,13 +249,31 @@ def run(
     os.makedirs(sample_tmp_dir, exist_ok=True)
 
     mt_prefix = mosdepth_prefix(tmp_dir, sample_id, "mt")
-    mt_command = [mosdepth, "--no-per-base", "--chrom", mt_contig, mt_prefix, bam_path]
+    mt_command = [
+        mosdepth,
+        "--no-per-base",
+        "--threads",
+        str(mosdepth_threads),
+        "--chrom",
+        mt_contig,
+        mt_prefix,
+        bam_path,
+    ]
     run_mosdepth(mt_command, logger)
     mt_summary = f"{mt_prefix}.mosdepth.summary.txt"
     mean_mt = read_mosdepth_summary(mt_summary, mt_contig)
 
     auto_prefix = mosdepth_prefix(tmp_dir, sample_id, "autosome")
-    auto_command = [mosdepth, "--no-per-base", "--by", bed_path, auto_prefix, bam_path]
+    auto_command = [
+        mosdepth,
+        "--no-per-base",
+        "--threads",
+        str(mosdepth_threads),
+        "--by",
+        bed_path,
+        auto_prefix,
+        bam_path,
+    ]
     run_mosdepth(auto_command, logger)
     regions_path = f"{auto_prefix}.regions.bed.gz"
     mean_auto, auto_count = read_mosdepth_regions(regions_path)
@@ -275,6 +303,7 @@ def run(
             ]
         )
     os.replace(tmp_output, output_path)
+    append_success_log(success_log, sample_id)
     log_status(logger, "SUCCESS")
 
 
@@ -289,6 +318,8 @@ def main() -> None:
     parser.add_argument("--tmp-dir", help="Temporary directory")
     parser.add_argument("--samtools", help="samtools executable")
     parser.add_argument("--mosdepth", help="mosdepth executable")
+    parser.add_argument("--mosdepth-threads", type=int, help="mosdepth threads")
+    parser.add_argument("--success-log", help="Path to success log")
     parser.add_argument("--force", action="store_true", help="Force recompute")
     args = parser.parse_args()
 
@@ -299,6 +330,8 @@ def main() -> None:
     log_dir = config.get("log_dir")
     samtools = args.samtools or config.get("samtools", "samtools")
     mosdepth = args.mosdepth or config.get("mosdepth", "mosdepth")
+    mosdepth_threads = args.mosdepth_threads or int(config.get("mosdepth_threads", 4))
+    success_log = args.success_log or config.get("success_log")
 
     if not reference_fasta:
         raise SystemExit("Missing reference_fasta")
@@ -322,6 +355,8 @@ def main() -> None:
             tmp_dir=tmp_dir,
             samtools=samtools,
             mosdepth=mosdepth,
+            mosdepth_threads=mosdepth_threads,
+            success_log=success_log,
             force=args.force,
         )
     except Exception as exc:

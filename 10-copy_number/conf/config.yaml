@@ -7,9 +7,11 @@ reference_fasta: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/4-M
 output_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/output
 tmp_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/tmp
 log_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/log
+success_log: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/log/success.log
 
 samtools: samtools
-mosdepth: mosdepth
+mosdepth: mosdepth  #? 计算测序深度的工具
+mosdepth_threads: 4 #? 每个样本计算深度时使用的线程数
 
 jobs_default: 5
 merge_output_name: mtDNA_copy_number.tsv

@@ -29,6 +29,7 @@ done
 
 CONFIG_CLI="$BASE_DIR/python/config_cli.py"
 LOG_DIR=$(python "$CONFIG_CLI" --config "$CONFIG" --key log_dir)
+SUCCESS_LOG=$(python "$CONFIG_CLI" --config "$CONFIG" --key success_log)
 LIST_PATH=$(python "$CONFIG_CLI" --config "$CONFIG" --key list_path)
 MT_COPY_PY=$(python "$CONFIG_CLI" --config "$CONFIG" --key mt_copy_number_py)
 MERGE_PY=$(python "$CONFIG_CLI" --config "$CONFIG" --key merge_results_py)
@@ -41,6 +42,10 @@ if [[ -z "$JOBS" ]]; then
 fi
 
 mkdir -p "$LOG_DIR"
+if [[ -n "$SUCCESS_LOG" ]]; then
+  mkdir -p "$(dirname "$SUCCESS_LOG")"
+  touch "$SUCCESS_LOG"
+fi
 LOG_FILE="$LOG_DIR/1-run-all.sh.log"
 
 if [[ -f "$LOG_FILE" ]] && grep -q "STATUS\tSUCCESS" "$LOG_FILE" && [[ "$FORCE" -eq 0 ]]; then
@@ -56,6 +61,7 @@ trap 'status=$?; if [[ $status -ne 0 ]]; then echo -e "STATUS\tFAILED\tcode=$sta
 echo "CONFIG\t$CONFIG"
 echo "LIST\t$LIST_PATH"
 echo "OUTPUT_DIR\t$OUTPUT_DIR"
+echo "SUCCESS_LOG\t$SUCCESS_LOG"
 
 echo "JOB_MODE\tparallel"
 
@@ -65,18 +71,33 @@ if [[ "$FORCE" -eq 1 ]]; then
 fi
 
 if command -v parallel >/dev/null 2>&1; then
-  parallel --colsep '\t' --jobs "$JOBS" --halt now,fail=1 \
-    python "$MT_COPY_PY" \
-      --config "$CONFIG" --sample-id {1} --bam {2} $force_arg \
-    :::: "$LIST_PATH"
+  if [[ "$FORCE" -eq 1 ]]; then
+    parallel --colsep '\t' --jobs "$JOBS" --halt now,fail=1 \
+      python "$MT_COPY_PY" \
+        --config "$CONFIG" --sample-id {1} --bam {2} $force_arg --success-log "$SUCCESS_LOG" \
+      :::: "$LIST_PATH"
+  else
+    awk 'FNR==NR {done[$1]=1; next} !($1 in done)' "$SUCCESS_LOG" "$LIST_PATH" | \
+      parallel --colsep '\t' --jobs "$JOBS" --halt now,fail=1 \
+        python "$MT_COPY_PY" \
+          --config "$CONFIG" --sample-id {1} --bam {2} $force_arg --success-log "$SUCCESS_LOG"
+  fi
 else
   echo "GNU parallel not found, falling back to xargs -P" >&2
   export CONFIG
   export FORCE_ARG="$force_arg"
+  export SUCCESS_LOG
   export MT_COPY_PY
-  cut -f1,2 "$LIST_PATH" | xargs -P "$JOBS" -n 2 sh -c \
-    'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --bam "$2" $FORCE_ARG' \
-    _
+  if [[ "$FORCE" -eq 1 ]]; then
+    cut -f1,2 "$LIST_PATH" | xargs -P "$JOBS" -n 2 sh -c \
+      'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --bam "$2" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
+      _
+  else
+    awk 'FNR==NR {done[$1]=1; next} !($1 in done)' "$SUCCESS_LOG" "$LIST_PATH" | \
+      xargs -P "$JOBS" -n 2 sh -c \
+        'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --bam "$2" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
+        _
+  fi
 fi
 
 python "$MERGE_PY" \
