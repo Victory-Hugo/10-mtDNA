@@ -1,0 +1,84 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+CONFIG="$BASE_DIR/conf/config.yaml"
+JOBS=""
+FORCE=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --config)
+      CONFIG="$2"
+      shift 2
+      ;;
+    --jobs)
+      JOBS="$2"
+      shift 2
+      ;;
+    --force)
+      FORCE=1
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+CONFIG_CLI="$BASE_DIR/python/config_cli.py"
+LOG_DIR=$(python "$CONFIG_CLI" --config "$CONFIG" --key log_dir)
+LIST_PATH=$(python "$CONFIG_CLI" --config "$CONFIG" --key list_path)
+MT_COPY_PY=$(python "$CONFIG_CLI" --config "$CONFIG" --key mt_copy_number_py)
+MERGE_PY=$(python "$CONFIG_CLI" --config "$CONFIG" --key merge_results_py)
+MERGE_NAME=$(python "$CONFIG_CLI" --config "$CONFIG" --key merge_output_name)
+OUTPUT_DIR=$(python "$CONFIG_CLI" --config "$CONFIG" --key output_dir)
+JOBS_DEFAULT=$(python "$CONFIG_CLI" --config "$CONFIG" --key jobs_default)
+
+if [[ -z "$JOBS" ]]; then
+  JOBS="$JOBS_DEFAULT"
+fi
+
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/1-run-all.sh.log"
+
+if [[ -f "$LOG_FILE" ]] && grep -q "STATUS\tSUCCESS" "$LOG_FILE" && [[ "$FORCE" -eq 0 ]]; then
+  echo -e "STATUS\tSKIP\tprevious success" >> "$LOG_FILE"
+  exit 0
+fi
+
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+status=0
+trap 'status=$?; if [[ $status -ne 0 ]]; then echo -e "STATUS\tFAILED\tcode=$status"; else echo -e "STATUS\tSUCCESS"; fi' EXIT
+
+echo "CONFIG\t$CONFIG"
+echo "LIST\t$LIST_PATH"
+echo "OUTPUT_DIR\t$OUTPUT_DIR"
+
+echo "JOB_MODE\tparallel"
+
+force_arg=""
+if [[ "$FORCE" -eq 1 ]]; then
+  force_arg="--force"
+fi
+
+if command -v parallel >/dev/null 2>&1; then
+  parallel --colsep '\t' --jobs "$JOBS" --halt now,fail=1 \
+    python "$MT_COPY_PY" \
+      --config "$CONFIG" --sample-id {1} --bam {2} $force_arg \
+    :::: "$LIST_PATH"
+else
+  echo "GNU parallel not found, falling back to xargs -P" >&2
+  export CONFIG
+  export FORCE_ARG="$force_arg"
+  export MT_COPY_PY
+  cut -f1,2 "$LIST_PATH" | xargs -P "$JOBS" -n 2 sh -c \
+    'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --bam "$2" $FORCE_ARG' \
+    _
+fi
+
+python "$MERGE_PY" \
+  --output-dir "$OUTPUT_DIR" \
+  --output "$OUTPUT_DIR/$MERGE_NAME"

@@ -1,0 +1,18 @@
+project_root: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number
+python_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/python
+
+list_path: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/meta/list.txt
+reference_fasta: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/4-Mutect2/conf/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta
+
+output_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/output
+tmp_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/tmp
+log_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/log
+
+samtools: samtools
+mosdepth: mosdepth
+
+jobs_default: 5
+merge_output_name: mtDNA_copy_number.tsv
+
+mt_copy_number_py: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/python/mt_copy_number.py
+merge_results_py: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/python/merge_results.py
