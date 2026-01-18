@@ -27,7 +27,13 @@ done
 
 eval "$("python3" "$config_loader" --config "$config_path")"
 
-set -- "${args[@]}"
+# 保存原始参数，处理空参数情况
+if [[ $# -gt 0 ]]; then
+    args=("$@")
+else
+    args=()
+fi
+
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

@@ -11,12 +11,15 @@ def load_config(path: str) -> Dict[str, Any]:
         return yaml.safe_load(handle) or {}
 
 
-def run(config_path: str, key: str) -> int:
+def run(config_path: str, key: str, default: Any = None) -> int:
     config = load_config(config_path)
     if key not in config:
-        sys.stderr.write(f"Missing key in config: {key}\n")
-        return 1
-    value = config[key]
+        if default is None:
+            sys.stderr.write(f"Missing key in config: {key}\n")
+            return 1
+        value = default
+    else:
+        value = config[key]
     if isinstance(value, (dict, list)):
         sys.stderr.write(f"Key is not a scalar value: {key}\n")
         return 1
@@ -28,8 +31,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Read scalar config values.")
     parser.add_argument("--config", required=True, help="Path to YAML config")
     parser.add_argument("--key", required=True, help="Config key to read")
+    parser.add_argument("--default", help="Default value if key is missing")
     args = parser.parse_args()
-    raise SystemExit(run(args.config, args.key))
+    raise SystemExit(run(args.config, args.key, args.default))
 
 
 if __name__ == "__main__":

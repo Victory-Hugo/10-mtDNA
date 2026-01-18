@@ -31,6 +31,7 @@ CONFIG_CLI="$BASE_DIR/python/config_cli.py"
 LOG_DIR=$(python "$CONFIG_CLI" --config "$CONFIG" --key log_dir)
 SUCCESS_LOG=$(python "$CONFIG_CLI" --config "$CONFIG" --key success_log)
 LIST_PATH=$(python "$CONFIG_CLI" --config "$CONFIG" --key list_path)
+INPUT_TYPE=$(python "$CONFIG_CLI" --config "$CONFIG" --key input_type --default "BAM")
 MT_COPY_PY=$(python "$CONFIG_CLI" --config "$CONFIG" --key mt_copy_number_py)
 MERGE_PY=$(python "$CONFIG_CLI" --config "$CONFIG" --key merge_results_py)
 MERGE_NAME=$(python "$CONFIG_CLI" --config "$CONFIG" --key merge_output_name)
@@ -60,6 +61,7 @@ trap 'status=$?; if [[ $status -ne 0 ]]; then echo -e "STATUS\tFAILED\tcode=$sta
 
 echo "CONFIG\t$CONFIG"
 echo "LIST\t$LIST_PATH"
+echo "INPUT_TYPE\t$INPUT_TYPE"
 echo "OUTPUT_DIR\t$OUTPUT_DIR"
 echo "SUCCESS_LOG\t$SUCCESS_LOG"
 
@@ -74,13 +76,13 @@ if command -v parallel >/dev/null 2>&1; then
   if [[ "$FORCE" -eq 1 ]]; then
     parallel --colsep '\t' --jobs "$JOBS" --halt now,fail=1 \
       python "$MT_COPY_PY" \
-        --config "$CONFIG" --sample-id {1} --bam {2} $force_arg --success-log "$SUCCESS_LOG" \
+        --config "$CONFIG" --sample-id {1} --input {2} --input-type "$INPUT_TYPE" $force_arg --success-log "$SUCCESS_LOG" \
       :::: "$LIST_PATH"
   else
     awk 'FNR==NR {done[$1]=1; next} !($1 in done)' "$SUCCESS_LOG" "$LIST_PATH" | \
       parallel --colsep '\t' --jobs "$JOBS" --halt now,fail=1 \
         python "$MT_COPY_PY" \
-          --config "$CONFIG" --sample-id {1} --bam {2} $force_arg --success-log "$SUCCESS_LOG"
+          --config "$CONFIG" --sample-id {1} --input {2} --input-type "$INPUT_TYPE" $force_arg --success-log "$SUCCESS_LOG"
   fi
 else
   echo "GNU parallel not found, falling back to xargs -P" >&2
@@ -88,14 +90,15 @@ else
   export FORCE_ARG="$force_arg"
   export SUCCESS_LOG
   export MT_COPY_PY
+  export INPUT_TYPE
   if [[ "$FORCE" -eq 1 ]]; then
     cut -f1,2 "$LIST_PATH" | xargs -P "$JOBS" -n 2 sh -c \
-      'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --bam "$2" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
+      'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --input "$2" --input-type "$INPUT_TYPE" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
       _
   else
     awk 'FNR==NR {done[$1]=1; next} !($1 in done)' "$SUCCESS_LOG" "$LIST_PATH" | \
       xargs -P "$JOBS" -n 2 sh -c \
-        'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --bam "$2" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
+        'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --input "$2" --input-type "$INPUT_TYPE" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
         _
   fi
 fi

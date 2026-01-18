@@ -208,9 +208,17 @@ def append_success_log(success_log: Optional[str], sample_id: str) -> None:
         handle.write(f"{sample_id}\n")
 
 
+def normalize_input_type(input_type: str) -> str:
+    value = (input_type or "").strip().upper()
+    if value in {"BAM", "CRAM"}:
+        return value
+    raise ValueError(f"Unsupported input_type: {input_type}")
+
+
 def run(
     sample_id: str,
-    bam_path: str,
+    input_path: str,
+    input_type: str,
     reference_fasta: str,
     output_path: str,
     log_path: str,
@@ -227,7 +235,8 @@ def run(
         return
 
     logger.info("SAMPLE\t%s", sample_id)
-    logger.info("BAM\t%s", bam_path)
+    logger.info("INPUT\t%s", input_path)
+    logger.info("INPUT_TYPE\t%s", input_type)
     logger.info("REFERENCE\t%s", reference_fasta)
     logger.info("OUTPUT\t%s", output_path)
     logger.info("TMP\t%s", tmp_dir)
@@ -254,10 +263,14 @@ def run(
         "--no-per-base",
         "--threads",
         str(mosdepth_threads),
+    ]
+    if input_type == "CRAM":
+        mt_command += ["--fasta", reference_fasta]
+    mt_command += [
         "--chrom",
         mt_contig,
         mt_prefix,
-        bam_path,
+        input_path,
     ]
     run_mosdepth(mt_command, logger)
     mt_summary = f"{mt_prefix}.mosdepth.summary.txt"
@@ -269,10 +282,14 @@ def run(
         "--no-per-base",
         "--threads",
         str(mosdepth_threads),
+    ]
+    if input_type == "CRAM":
+        auto_command += ["--fasta", reference_fasta]
+    auto_command += [
         "--by",
         bed_path,
         auto_prefix,
-        bam_path,
+        input_path,
     ]
     run_mosdepth(auto_command, logger)
     regions_path = f"{auto_prefix}.regions.bed.gz"
@@ -308,10 +325,12 @@ def run(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Compute mtDNA copy number from a BAM file.")
+    parser = argparse.ArgumentParser(description="Compute mtDNA copy number from a BAM/CRAM file.")
     parser.add_argument("--config", help="Path to YAML config")
     parser.add_argument("--sample-id", required=True, help="Sample ID")
-    parser.add_argument("--bam", required=True, help="Input BAM path")
+    parser.add_argument("--input", help="Input BAM/CRAM path")
+    parser.add_argument("--input-type", help="Input type: BAM or CRAM")
+    parser.add_argument("--bam", help="Legacy option, same as --input")
     parser.add_argument("--reference-fasta", help="Reference FASTA path")
     parser.add_argument("--output", help="Output TSV path")
     parser.add_argument("--log", help="Log file path")
@@ -332,6 +351,9 @@ def main() -> None:
     mosdepth = args.mosdepth or config.get("mosdepth", "mosdepth")
     mosdepth_threads = args.mosdepth_threads or int(config.get("mosdepth_threads", 4))
     success_log = args.success_log or config.get("success_log")
+    input_type = args.input_type or config.get("input_type", "BAM")
+    input_type = normalize_input_type(input_type)
+    input_path = args.input or args.bam
 
     if not reference_fasta:
         raise SystemExit("Missing reference_fasta")
@@ -341,6 +363,8 @@ def main() -> None:
         raise SystemExit("Missing output_dir")
     if not log_dir:
         raise SystemExit("Missing log_dir")
+    if not input_path:
+        raise SystemExit("Missing input path (--input or --bam)")
 
     output_path = args.output or os.path.join(output_dir, f"{args.sample_id}.tsv")
     log_path = args.log or os.path.join(log_dir, f"mt_copy_number_{args.sample_id}.log")
@@ -348,7 +372,8 @@ def main() -> None:
     try:
         run(
             sample_id=args.sample_id,
-            bam_path=args.bam,
+            input_path=input_path,
+            input_type=input_type,
             reference_fasta=reference_fasta,
             output_path=output_path,
             log_path=log_path,

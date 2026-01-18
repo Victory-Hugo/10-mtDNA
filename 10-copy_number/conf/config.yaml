@@ -2,6 +2,7 @@ project_root: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-cop
 python_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/python
 
 list_path: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/meta/list.txt
+input_type: BAM  # BAM or CRAM
 reference_fasta: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/4-Mutect2/conf/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta
 
 output_dir: /mnt/f/Onedrive/文档（科研）/脚本/Download/10-mtDNA/10-copy_number/output

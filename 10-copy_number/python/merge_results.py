@@ -48,7 +48,9 @@ def run(output_dir: str, output_path: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Merge per-sample mtDNA copy number TSVs.")
+    parser = argparse.ArgumentParser(
+        description="Merge per-sample mtDNA copy number TSVs (BAM/CRAM)."
+    )
     parser.add_argument("--output-dir", required=True, help="Directory with per-sample TSVs")
     parser.add_argument("--output", required=True, help="Merged TSV path")
     args = parser.parse_args()
