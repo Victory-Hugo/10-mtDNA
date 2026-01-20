@@ -6,6 +6,54 @@ CONFIG="$BASE_DIR/conf/config.yaml"
 JOBS=""
 FORCE=0
 
+read_config() {
+  local config_path="$1"
+  local key="$2"
+  local default="${3-__MISSING__}"
+  local value
+
+  value=$(awk -v key="$key" '
+    /^[[:space:]]*#/ {next}
+    /^[[:space:]]*$/ {next}
+    /^[^[:space:]][^:]*:[[:space:]]*/ {
+      k=$0
+      sub(/:.*/, "", k)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", k)
+      if (k == key) {
+        v=$0
+        sub(/^[^:]*:[[:space:]]*/, "", v)
+        print v
+        exit 0
+      }
+    }
+  ' "$config_path")
+
+  if [[ -z "$value" ]]; then
+    if [[ "$default" == "__MISSING__" ]]; then
+      echo "Missing key in config: $key" >&2
+      return 1
+    fi
+    echo "$default"
+    return 0
+  fi
+
+  if [[ "$value" =~ ^[\{\[] ]]; then
+    echo "Key is not a scalar value: $key" >&2
+    return 1
+  fi
+
+  value="${value%%[[:space:]]#*}"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  if [[ "$value" =~ ^\".*\"$ ]]; then
+    value="${value:1:${#value}-2}"
+  elif [[ "$value" =~ ^\'.*\'$ ]]; then
+    value="${value:1:${#value}-2}"
+  fi
+
+  echo "$value"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --config)
@@ -27,16 +75,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-CONFIG_CLI="$BASE_DIR/python/config_cli.py"
-LOG_DIR=$(python "$CONFIG_CLI" --config "$CONFIG" --key log_dir)
-SUCCESS_LOG=$(python "$CONFIG_CLI" --config "$CONFIG" --key success_log)
-LIST_PATH=$(python "$CONFIG_CLI" --config "$CONFIG" --key list_path)
-INPUT_TYPE=$(python "$CONFIG_CLI" --config "$CONFIG" --key input_type --default "BAM")
-MT_COPY_PY=$(python "$CONFIG_CLI" --config "$CONFIG" --key mt_copy_number_py)
-MERGE_PY=$(python "$CONFIG_CLI" --config "$CONFIG" --key merge_results_py)
-MERGE_NAME=$(python "$CONFIG_CLI" --config "$CONFIG" --key merge_output_name)
-OUTPUT_DIR=$(python "$CONFIG_CLI" --config "$CONFIG" --key output_dir)
-JOBS_DEFAULT=$(python "$CONFIG_CLI" --config "$CONFIG" --key jobs_default)
+LOG_DIR=$(read_config "$CONFIG" log_dir)
+SUCCESS_LOG=$(read_config "$CONFIG" success_log)
+LIST_PATH=$(read_config "$CONFIG" list_path)
+INPUT_TYPE=$(read_config "$CONFIG" input_type "BAM")
+MT_COPY_PY=$(read_config "$CONFIG" mt_copy_number_py)
+MERGE_PY=$(read_config "$CONFIG" merge_results_py)
+MERGE_NAME=$(read_config "$CONFIG" merge_output_name)
+OUTPUT_DIR=$(read_config "$CONFIG" output_dir)
+JOBS_DEFAULT=$(read_config "$CONFIG" jobs_default)
 
 if [[ -z "$JOBS" ]]; then
   JOBS="$JOBS_DEFAULT"
@@ -79,10 +126,17 @@ if command -v parallel >/dev/null 2>&1; then
         --config "$CONFIG" --sample-id {1} --input {2} --input-type "$INPUT_TYPE" $force_arg --success-log "$SUCCESS_LOG" \
       :::: "$LIST_PATH"
   else
-    awk 'FNR==NR {done[$1]=1; next} !($1 in done)' "$SUCCESS_LOG" "$LIST_PATH" | \
+    if [[ -s "$SUCCESS_LOG" ]]; then
+      awk 'FNR==NR {done[$1]=1; next} !($1 in done)' "$SUCCESS_LOG" "$LIST_PATH" | \
+        parallel --colsep '\t' --jobs "$JOBS" --halt now,fail=1 \
+          python "$MT_COPY_PY" \
+            --config "$CONFIG" --sample-id {1} --input {2} --input-type "$INPUT_TYPE" $force_arg --success-log "$SUCCESS_LOG"
+    else
       parallel --colsep '\t' --jobs "$JOBS" --halt now,fail=1 \
         python "$MT_COPY_PY" \
-          --config "$CONFIG" --sample-id {1} --input {2} --input-type "$INPUT_TYPE" $force_arg --success-log "$SUCCESS_LOG"
+          --config "$CONFIG" --sample-id {1} --input {2} --input-type "$INPUT_TYPE" $force_arg --success-log "$SUCCESS_LOG" \
+        :::: "$LIST_PATH"
+    fi
   fi
 else
   echo "GNU parallel not found, falling back to xargs -P" >&2
@@ -96,10 +150,16 @@ else
       'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --input "$2" --input-type "$INPUT_TYPE" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
       _
   else
-    awk 'FNR==NR {done[$1]=1; next} !($1 in done)' "$SUCCESS_LOG" "$LIST_PATH" | \
-      xargs -P "$JOBS" -n 2 sh -c \
+    if [[ -s "$SUCCESS_LOG" ]]; then
+      awk 'FNR==NR {done[$1]=1; next} !($1 in done)' "$SUCCESS_LOG" "$LIST_PATH" | \
+        xargs -P "$JOBS" -n 2 sh -c \
+          'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --input "$2" --input-type "$INPUT_TYPE" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
+          _
+    else
+      cut -f1,2 "$LIST_PATH" | xargs -P "$JOBS" -n 2 sh -c \
         'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --input "$2" --input-type "$INPUT_TYPE" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
         _
+    fi
   fi
 fi
 
