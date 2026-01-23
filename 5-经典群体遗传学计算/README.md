@@ -1,121 +1,65 @@
-# 经典群体遗传学计算（scikit-allel）
+# 经典群体遗传学计算
 
-该模块读取 VCF 与样本信息表，按分群列计算：π、θw、Tajima's D、SFS、FST、Dxy。
+该模块通过统一脚本 `pipe/1-run.sh` 读取配置文件，完成样本表过滤与主流程分析。脚本支持断点续跑、日志追踪、可选复杂变异跳过与显著性分析。
 
 ## 目录结构
 
 ```
 conf/
-input/
-data/
-output/
-tmp/
 log/
-script/
-python/
-requirements.txt
-```
-
-## 使用方式
-
-```bash
-python python/population_genetics.py \
-  --vcf /path/to/input.vcf.gz \
-  --sample-table /path/to/meta.tsv \
-  --group-cols Population,Region \
-  --id-col ID \
-  --output-dir /path/to/output \
-  --chrom chrM \
-  --skip-complex-variants \
-  --enable-significance \
-  --permutation-n 1000 \
-  --bootstrap-n 1000 \
-  --random-seed 2026
-```
-
-## 输出说明
-
-每个分群列会生成一个子目录：
-
-```
 output/
-  group_Population/
-    population/
-      population_counts.csv
-      pi.csv
-      theta_w.csv
-      tajima_d.csv
-      sfs_long.csv
-    pairwise/
-      fst.csv
-      dxy.csv
-      fst_pvalue.csv
-      dxy_pvalue.csv
-      pi_bootstrap.csv
-      theta_w_bootstrap.csv
+python/
+script/
 ```
 
-## 指标公式核对（metrics.py）
+## 快速开始
 
-以下核对基于 `python/metrics.py` 中实现，逐条对照 scikit-allel 官方函数定义：
-
-- **π (nucleotide diversity)**
-  - 实现：`allel.sequence_diversity(pos, ac)`
-  - 含义：基于等位基因计数的每位点平均差异数，按位点坐标 `pos` 计算。
-  - 结论：与 scikit-allel 定义一致，无明显逻辑偏差。
-
-- **θw (Watterson's theta)**
-  - 实现：`allel.watterson_theta(pos, ac)`
-  - 含义：基于分离位点数与样本量的 $theta_w$，按位点坐标 `pos` 计算。
-  - 结论：与 scikit-allel 定义一致，无明显逻辑偏差。
-
-- **Tajima's D**
-  - 实现：`allel.tajima_d(ac, pos=pos)`
-  - 含义：由 $pi$ 与 $theta_w$ 的差异构建的检验统计量。
-  - 结论：与 scikit-allel 定义一致；结果依赖于位点过滤和样本量。
-
-- **SFS (site frequency spectrum)**
-  - Folded：`allel.sfs_folded(ac_seg)`
-  - Unfolded：`allel.sfs(dac)`，其中 `dac = ac_seg[:, 1]`
-  - 结论：folded SFS 与 scikit-allel 一致。unfolded SFS 假设等位基因 1 为“导出等位”，若未指定外群或已定向，则属于“伪 unfold”。
-
-- **FST (Weir & Cockerham)**
-  - 实现：`allel.weir_cockerham_fst(gt_array, subpops)`，最终值为 $\sum a / \sum(a+b+c)$ 并截断到 $[0,1]$。
-  - 结论：与 scikit-allel 推荐汇总方式一致。
-
-- **Dxy (sequence divergence)**
-  - 实现：`allel.sequence_divergence(pos, ac1, ac2)`
-  - 含义：两群体间每位点的平均序列差异。
-  - 结论：与 scikit-allel 定义一致。
-
-- **Bootstrap (π/θw)**
-  - 实现：对位点进行有放回重采样，分别调用 `sequence_diversity` 与 `watterson_theta`。
-  - 结论：方法符合常规位点 bootstrap。
-
-- **Permutation (FST/Dxy)**
-  - 实现：对两群体样本标签置换，重复计算 FST 与 Dxy。
-  - 结论：逻辑正确；适用于检验组间差异显著性。
-
-**已知假设与注意**
-- 结果依赖于 `filter_variants` 的位点过滤（如仅二等位 SNP）。
-- 缺失基因型通过 `count_alleles()` 自动忽略；若缺失较多，建议报告有效样本量。
-- Unfolded SFS 的“导出等位”需要外群定向，否则只能解读为相对频谱。
-
-## Tajima's D 显著性（msprime）
-
-推荐使用 `msprime` 模拟中性模型生成 Tajima's D 的零分布，输出 p 值：
-
-推荐在 `conf/1-run.conf` 中用参数化方式配置，避免长命令：
+1. 编辑配置文件（示例：`conf/1-run.conf`）。
+2. 运行流程：
 
 ```bash
-TAJIMA_TOOL="${PROJECT_DIR}/python/tajima_significance.py"
-TAJIMA_N_REPLICATES="2000"
-TAJIMA_LENGTH="16569"
-TAJIMA_NE_MIN="2000"
-TAJIMA_NE_MAX="20000"
-TAJIMA_MU_MIN="1e-8"
-TAJIMA_MU_MAX="3e-8"
+bash pipe/1-run.sh conf/1-run.conf
 ```
 
-输出字段包含 `population`, `tajima_d`, `p_value`, `n_samples`, `n_segregating` 以及模拟参数范围与 null CI。
+如需强制重跑，将配置中的 `FORCE` 设为 `true`。
+
+## 配置项说明（1-run.conf）
+
+`1-run.sh` 通过 `source` 读取配置，常用字段如下：
+
+- `PROJECT_DIR`：模块根目录。
+- `VCF_PATH`：输入 VCF（可为 bgzip 压缩）。
+- `SAMPLE_TABLE_PATH`：样本信息表。
+- `FILTERED_SAMPLE_TABLE_PATH`：过滤后的样本表输出路径。
+- `OUTPUT_DIR`：主输出目录。
+- `LOG_DIR`：日志目录。
+- `GROUP_COLS`：分群列名，逗号分隔（例如 `Population,Region`）。
+- `ID_COL`：样本 ID 列名。
+- `CHROM_NAME`：染色体名（如 `chrM`）。
+- `USE_FILTERED_TABLE`：是否执行样本表过滤（`true/false`）。
+- `SKIP_COMPLEX_VARIANTS`：是否跳过复杂变异（`true/false`）。
+- `ENABLE_SIGNIFICANCE`：是否启用显著性分析（`true/false`）。
+- `PERMUTATION_N`：置换次数（默认 1000）。
+- `BOOTSTRAP_N`：bootstrap 次数（默认 1000）。
+- `RANDOM_SEED`：随机种子（可选）。
+- `CONDA_ENV`：运行脚本的 conda 环境名。
+- `FORCE`：是否忽略成功日志强制重跑（`true/false`）。
+
+## 执行流程说明
+
+1. 初始化日志并记录参数。
+2. 若日志中已出现 `SUCCESS` 且 `FORCE != true`，则跳过执行。
+3. 可选：运行 `python/filter_sample_table.py` 过滤样本表。
+4. 运行主分析脚本 `python/population_genetics.py`。
+5. 完成后写入 `SUCCESS` 标记。
+
+## 日志与断点续跑
+
+- 日志文件：`log/1-run.sh.log`（自动追加）。
+- 断点续跑：检测到 `SUCCESS` 将自动退出。
+
+## 常见注意事项
+
+- 每个群体样本数需 ≥2，否则主程序会报错。
+- 变异过滤策略会显著影响统计量，建议固定过滤规则后再做比较。
 ```

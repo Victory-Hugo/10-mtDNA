@@ -1,0 +1,47 @@
+---
+title: ""    # 占位符，留空，实际标题在 include-before-body 中定义
+keep-tex: false
+format:
+  pdf:
+    pdf-engine: lualatex
+    documentclass: ctexart
+    geometry:
+      - left=2.4cm
+      - right=2.4cm
+      - top=2.6cm
+      - bottom=2.0cm
+include-in-header:
+  - text: |
+      \usepackage{xcolor}
+      \definecolor{accent}{HTML}{3E89BA}
+      \definecolor{emailc}{HTML}{3E89BA}
+      \usepackage{hyperref}
+      \hypersetup{
+        colorlinks=true,
+        linkcolor=accent,
+        urlcolor=accent,
+        citecolor=accent
+      }
+      \urlstyle{same}
+
+      \usepackage{microtype}
+      \usepackage{orcidlink}
+      \setlength{\parindent}{0pt}
+      \setlength{\parskip}{0.35em}
+      \linespread{1.15}
+include-before-body:
+  - text: |
+      \begin{center}
+      \LARGE\bfseries\textcolor{accent}{经典群体遗传学计算方法}\par
+      \vspace{0.0em}
+      {\color{accent}\rule[10ex]{1\linewidth}{0.8pt}}
+      \end{center}
+      \vspace{-7em}
+      \large\textbf{Luolintao}\orcidlink{0009-0001-5790-4866}\par
+      \textcolor{accent}{giantlinlinlin@gmail.com}\par
+      \vspace{0.6em}
+
+---
+# 代码对应的计算方法
+{{< include Methods.md >}}
+
