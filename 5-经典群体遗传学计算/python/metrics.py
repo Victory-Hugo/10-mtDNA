@@ -192,8 +192,11 @@ def bootstrap_diversity(
     for b in range(n_boot):
         idx = boot_indices[b]
         pos_b = pos[idx]
+        order = np.argsort(pos_b)
+        pos_b = pos_b[order]
         for pop, ac in ac_by_pop.items():
             ac_b = ac[idx]
+            ac_b = ac_b[order]
             results[pop]["pi"][b] = allel.sequence_diversity(pos_b, ac_b)
             results[pop]["theta_w"][b] = allel.watterson_theta(pos_b, ac_b)
 

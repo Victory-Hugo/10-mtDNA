@@ -20,6 +20,8 @@ def save_population_metrics(
     sfs_folded: Dict[str, SfsResult],
     sfs_unfolded: Dict[str, SfsResult],
     population_counts: pd.DataFrame,
+    pi_bootstrap: pd.DataFrame | None = None,
+    theta_w_bootstrap: pd.DataFrame | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -36,6 +38,10 @@ def save_population_metrics(
     pd.DataFrame({"population": list(tajima_d_results.keys()), "tajima_d": list(tajima_d_results.values())}).to_csv(
         output_dir / "tajima_d.csv", index=False
     )
+    if pi_bootstrap is not None:
+        pi_bootstrap.to_csv(output_dir / "pi_bootstrap.csv", index=False)
+    if theta_w_bootstrap is not None:
+        theta_w_bootstrap.to_csv(output_dir / "theta_w_bootstrap.csv", index=False)
 
     def _iter_sfs_rows(
         sfs_data: Dict[str, SfsResult],
@@ -78,8 +84,6 @@ def save_pairwise_metrics(
     dxy: pd.DataFrame,
     fst_p: pd.DataFrame | None = None,
     dxy_p: pd.DataFrame | None = None,
-    pi_bootstrap: pd.DataFrame | None = None,
-    theta_w_bootstrap: pd.DataFrame | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     logger.info("写入成对指标: %s", output_dir)
@@ -89,8 +93,4 @@ def save_pairwise_metrics(
         fst_p.to_csv(output_dir / "fst_pvalue.csv")
     if dxy_p is not None:
         dxy_p.to_csv(output_dir / "dxy_pvalue.csv")
-    if pi_bootstrap is not None:
-        pi_bootstrap.to_csv(output_dir / "pi_bootstrap.csv", index=False)
-    if theta_w_bootstrap is not None:
-        theta_w_bootstrap.to_csv(output_dir / "theta_w_bootstrap.csv", index=False)
     logger.info("成对指标写入完成: %s", output_dir)

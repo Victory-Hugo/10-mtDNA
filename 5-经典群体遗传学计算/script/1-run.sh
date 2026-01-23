@@ -74,7 +74,7 @@ MAIN_SCRIPT="$PROJECT_DIR/python/population_genetics.py"
 
 RUN_SAMPLE_TABLE="$SAMPLE_TABLE_PATH"
 if [[ "$USE_FILTERED_TABLE" == "true" ]]; then
-  echo "运行样本表过滤步骤"
+  echo "################ 运行样本表过滤步骤 ################"
   conda run -n "$CONDA_ENV" python "$FILTER_SCRIPT" \
     --input "$SAMPLE_TABLE_PATH" \
     --output "$FILTERED_SAMPLE_TABLE_PATH"
@@ -95,7 +95,12 @@ SEED_FLAG=""
 if [[ -n "${RANDOM_SEED:-}" ]]; then
   SEED_FLAG="--random-seed ${RANDOM_SEED}"
 fi
-
+echo "###########################################"
+echo "############### 运行主分析 ################"
+echo "###########################################"
+echo "[请注意检查日志输出以确认参数设置正确]"
+echo "[请注意检查每个群体数量是否均≥2否则报错]"
+echo "###########################################"
 conda run -n "$CONDA_ENV" python "$MAIN_SCRIPT" \
   --vcf "$VCF_PATH" \
   --sample-table "$RUN_SAMPLE_TABLE" \

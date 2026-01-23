@@ -210,6 +210,8 @@ def run(
             sfs_folded_results,
             sfs_unfolded_results,
             group_counts,
+            pi_bootstrap=pi_bootstrap,
+            theta_w_bootstrap=theta_w_bootstrap,
         )
         save_pairwise_metrics(
             group_out / "pairwise",
@@ -217,8 +219,6 @@ def run(
             dxy_results,
             fst_p=fst_pvalues,
             dxy_p=dxy_pvalues,
-            pi_bootstrap=pi_bootstrap,
-            theta_w_bootstrap=theta_w_bootstrap,
         )
 
         logger.info("分群列 %s 计算完成，结果已写入: %s", group_col, group_out)
