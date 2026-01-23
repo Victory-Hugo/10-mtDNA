@@ -1,0 +1,5 @@
+numpy==2.1.3
+pandas==2.2.3
+scikit-allel==1.3.10
+msprime==1.3.2
+tskit==0.5.8
