@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import subprocess
 from pathlib import Path
 from typing import List
 
@@ -83,13 +82,6 @@ def run(
     permutation_n: int = 1000,
     bootstrap_n: int = 1000,
     random_seed: int | None = None,
-    tajima_tool: str | None = None,
-    tajima_n_replicates: int = 2000,
-    tajima_length: int = 16569,
-    tajima_ne_min: float = 2000,
-    tajima_ne_max: float = 20000,
-    tajima_mu_min: float = 1e-8,
-    tajima_mu_max: float = 3e-8,
 ) -> None:
     vcf_path = Path(vcf_path)
     sample_table_path = Path(sample_table_path)
@@ -181,27 +173,6 @@ def run(
                 metric_name="theta_w",
             )
 
-            if tajima_tool:
-                logger.info("显著性检验: Tajima's D 外部工具")
-                _run_tajima_tool(
-                    tajima_tool,
-                    group_out / "population",
-                    vcf_path,
-                    sample_table_path,
-                    group_col,
-                    id_col,
-                    chrom_name,
-                    tajima_n_replicates,
-                    tajima_length,
-                    tajima_ne_min,
-                    tajima_ne_max,
-                    tajima_mu_min,
-                    tajima_mu_max,
-                    random_seed,
-                )
-            else:
-                logger.warning("未设置 Tajima's D 外部工具，跳过显著性检验")
-
         save_population_metrics(
             group_out / "population",
             pi_results,
@@ -237,17 +208,6 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--permutation-n", type=int, default=1000, help="FST/Dxy 置换次数")
     parser.add_argument("--bootstrap-n", type=int, default=1000, help="π/θw bootstrap 次数")
     parser.add_argument("--random-seed", type=int, default=None, help="随机种子")
-    parser.add_argument(
-        "--tajima-tool",
-        default=None,
-        help="Tajima's D 显著性外部工具脚本路径",
-    )
-    parser.add_argument("--tajima-n-replicates", type=int, default=2000, help="Tajima 模拟次数")
-    parser.add_argument("--tajima-length", type=int, default=16569, help="Tajima 序列长度")
-    parser.add_argument("--tajima-ne-min", type=float, default=2000, help="Tajima Ne 下限")
-    parser.add_argument("--tajima-ne-max", type=float, default=20000, help="Tajima Ne 上限")
-    parser.add_argument("--tajima-mu-min", type=float, default=1e-8, help="Tajima 突变率下限")
-    parser.add_argument("--tajima-mu-max", type=float, default=3e-8, help="Tajima 突变率上限")
     return parser.parse_args()
 
 
@@ -269,13 +229,6 @@ def main() -> None:
         permutation_n=args.permutation_n,
         bootstrap_n=args.bootstrap_n,
         random_seed=args.random_seed,
-        tajima_tool=args.tajima_tool,
-        tajima_n_replicates=args.tajima_n_replicates,
-        tajima_length=args.tajima_length,
-        tajima_ne_min=args.tajima_ne_min,
-        tajima_ne_max=args.tajima_ne_max,
-        tajima_mu_min=args.tajima_mu_min,
-        tajima_mu_max=args.tajima_mu_max,
     )
 
 
@@ -305,57 +258,6 @@ def _pairwise_bootstrap_table(
                     }
                 )
     return pd.DataFrame(rows)
-
-
-def _run_tajima_tool(
-    tool_path: str,
-    output_dir: Path,
-    vcf_path: Path,
-    sample_table_path: Path,
-    group_col: str,
-    id_col: str,
-    chrom_name: str,
-    n_replicates: int,
-    length: int,
-    ne_min: float,
-    ne_max: float,
-    mu_min: float,
-    mu_max: float,
-    seed: int | None,
-) -> None:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        "python",
-        tool_path,
-        "--vcf",
-        str(vcf_path),
-        "--sample-table",
-        str(sample_table_path),
-        "--group-col",
-        group_col,
-        "--id-col",
-        id_col,
-        "--chrom",
-        chrom_name,
-        "--out",
-        str(output_dir / "tajima_significance.csv"),
-        "--n-replicates",
-        str(n_replicates),
-        "--length",
-        str(length),
-        "--ne-min",
-        str(ne_min),
-        "--ne-max",
-        str(ne_max),
-        "--mu-min",
-        str(mu_min),
-        "--mu-max",
-        str(mu_max),
-    ]
-    if seed is not None:
-        cmd.extend(["--seed", str(seed)])
-    logger.info("运行 Tajima 工具命令: %s", " ".join(cmd))
-    subprocess.run(cmd, check=True)
 
 
 if __name__ == "__main__":

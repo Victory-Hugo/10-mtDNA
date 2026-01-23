@@ -59,13 +59,6 @@ trap 'echo "FAILED $(date) code=$?"' ERR
   echo "PERMUTATION_N=$PERMUTATION_N"
   echo "BOOTSTRAP_N=$BOOTSTRAP_N"
   echo "RANDOM_SEED=$RANDOM_SEED"
-  echo "TAJIMA_TOOL=$TAJIMA_TOOL"
-  echo "TAJIMA_N_REPLICATES=$TAJIMA_N_REPLICATES"
-  echo "TAJIMA_LENGTH=$TAJIMA_LENGTH"
-  echo "TAJIMA_NE_MIN=$TAJIMA_NE_MIN"
-  echo "TAJIMA_NE_MAX=$TAJIMA_NE_MAX"
-  echo "TAJIMA_MU_MIN=$TAJIMA_MU_MIN"
-  echo "TAJIMA_MU_MAX=$TAJIMA_MU_MAX"
   echo "CONDA_ENV=$CONDA_ENV"
 }
 
@@ -111,13 +104,6 @@ conda run -n "$CONDA_ENV" python "$MAIN_SCRIPT" \
   --permutation-n "${PERMUTATION_N:-1000}" \
   --bootstrap-n "${BOOTSTRAP_N:-1000}" \
   $SEED_FLAG \
-  --tajima-tool "${TAJIMA_TOOL:-}" \
-  --tajima-n-replicates "${TAJIMA_N_REPLICATES:-2000}" \
-  --tajima-length "${TAJIMA_LENGTH:-16569}" \
-  --tajima-ne-min "${TAJIMA_NE_MIN:-2000}" \
-  --tajima-ne-max "${TAJIMA_NE_MAX:-20000}" \
-  --tajima-mu-min "${TAJIMA_MU_MIN:-1e-8}" \
-  --tajima-mu-max "${TAJIMA_MU_MAX:-3e-8}" \
   $SIGNIF_FLAG \
   $SKIP_FLAG
 
