@@ -70,7 +70,8 @@ if [[ "$USE_FILTERED_TABLE" == "true" ]]; then
   echo "################ 运行样本表过滤步骤 ################"
   conda run -n "$CONDA_ENV" python "$FILTER_SCRIPT" \
     --input "$SAMPLE_TABLE_PATH" \
-    --output "$FILTERED_SAMPLE_TABLE_PATH"
+    --output "$FILTERED_SAMPLE_TABLE_PATH" \
+    --group-cols "$GROUP_COLS"
   RUN_SAMPLE_TABLE="$FILTERED_SAMPLE_TABLE_PATH"
 fi
 

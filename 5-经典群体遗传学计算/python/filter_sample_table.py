@@ -60,8 +60,7 @@ def _read_table(table_path: Path) -> pd.DataFrame:
 def run(
     input_path: str,
     output_path: str,
-    province_col: str,
-    population_col: str,
+    group_cols: list[str],
 ) -> None:
     input_path = Path(input_path)
     output_path = Path(output_path)
@@ -69,21 +68,24 @@ def run(
     logger.info("开始过滤样本表")
     logger.info("输入: %s", input_path)
     logger.info("输出: %s", output_path)
-    logger.info("省份列: %s", province_col)
-    logger.info("群体列: %s", population_col)
+    logger.info("分组列: %s", ", ".join(group_cols))
 
     sample_df = _read_table(input_path)
 
-    province_counts = sample_df[province_col].value_counts(dropna=True)
-    population_counts = sample_df[population_col].value_counts(dropna=True)
+    missing_cols = [col for col in group_cols if col not in sample_df.columns]
+    if missing_cols:
+        raise KeyError(
+            "样本表缺少列: "
+            f"{', '.join(missing_cols)}。可用列: {list(sample_df.columns)}"
+        )
 
-    logger.info("省份可用群体数: %s", len(province_counts))
-    logger.info("群体可用群体数: %s", len(population_counts))
+    logger.info("分组列数量: %s", len(group_cols))
 
-    filtered = sample_df[
-        sample_df[province_col].map(province_counts).fillna(0).ge(2)
-        & sample_df[population_col].map(population_counts).fillna(0).ge(2)
-    ].copy()
+    filtered = sample_df.copy()
+    for col in group_cols:
+        counts = filtered[col].value_counts(dropna=True)
+        logger.info("%s 可用群体数: %s", col, len(counts))
+        filtered = filtered[filtered[col].map(counts).fillna(0).ge(2)].copy()
 
     logger.info("过滤前样本数: %s", len(sample_df))
     logger.info("过滤后样本数: %s", len(filtered))
@@ -94,22 +96,25 @@ def run(
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="过滤样本表：确保 Province/Population 群体数 >= 2")
+    parser = argparse.ArgumentParser(description="过滤样本表：确保各分组列群体数 >= 2")
     parser.add_argument("--input", required=True, help="输入样本表 (.csv/.tsv)")
     parser.add_argument("--output", required=True, help="输出过滤后样本表 (.tsv)")
-    parser.add_argument("--province-col", default="Province", help="省份列名，默认 Province")
-    parser.add_argument("--population-col", default="Population", help="群体列名，默认 Population")
+    parser.add_argument(
+        "--group-cols",
+        required=True,
+        help="分组列名称，逗号分隔",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = _parse_args()
     configure_logging(Path(args.output).with_suffix(".log"))
+    group_cols = [col.strip() for col in args.group_cols.split(",") if col.strip()]
     run(
         input_path=args.input,
         output_path=args.output,
-        province_col=args.province_col,
-        population_col=args.population_col,
+        group_cols=group_cols,
     )
 
 
