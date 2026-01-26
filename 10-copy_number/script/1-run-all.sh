@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-set -euo pipefail
+set -uo pipefail
 
 BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG="$BASE_DIR/conf/config.yaml"
@@ -95,6 +95,7 @@ if [[ -n "$SUCCESS_LOG" ]]; then
   touch "$SUCCESS_LOG"
 fi
 LOG_FILE="$LOG_DIR/1-run-all.sh.log"
+FAIL_LOG="$LOG_DIR/failed_samples.tsv"
 
 if [[ -f "$LOG_FILE" ]] && grep -q "STATUS\tSUCCESS" "$LOG_FILE" && [[ "$FORCE" -eq 0 ]]; then
   echo -e "STATUS\tSKIP\tprevious success" >> "$LOG_FILE"
@@ -113,54 +114,67 @@ echo "OUTPUT_DIR\t$OUTPUT_DIR"
 echo "SUCCESS_LOG\t$SUCCESS_LOG"
 
 echo "JOB_MODE\tparallel"
+echo -e "sample_id\tinput\texit_code" > "$FAIL_LOG"
 
 force_arg=""
 if [[ "$FORCE" -eq 1 ]]; then
   force_arg="--force"
 fi
 
+run_one() {
+  local sample_id="$1"
+  local input="$2"
+  local args
+  args=(--config "$CONFIG" --sample-id "$sample_id" --input "$input" --input-type "$INPUT_TYPE" --success-log "$SUCCESS_LOG")
+  if [[ "$FORCE" -eq 1 ]]; then
+    args+=(--force)
+  fi
+
+  python "$MT_COPY_PY" "${args[@]}"
+  local code=$?
+  if [[ $code -ne 0 ]]; then
+    printf "%s\t%s\t%s\n" "$sample_id" "$input" "$code" >> "$FAIL_LOG"
+  fi
+  return $code
+}
+
+export CONFIG SUCCESS_LOG MT_COPY_PY INPUT_TYPE FORCE FAIL_LOG
+export -f run_one
+
+parallel_exit=0
 if command -v parallel >/dev/null 2>&1; then
   if [[ "$FORCE" -eq 1 ]]; then
-    parallel --colsep '\t' --jobs "$JOBS" --halt now,fail=1 \
-      python "$MT_COPY_PY" \
-        --config "$CONFIG" --sample-id {1} --input {2} --input-type "$INPUT_TYPE" $force_arg --success-log "$SUCCESS_LOG" \
-      :::: "$LIST_PATH"
+    parallel --colsep '\t' --jobs "$JOBS" run_one {1} {2} \
+      :::: "$LIST_PATH" || parallel_exit=$?
   else
     if [[ -s "$SUCCESS_LOG" ]]; then
       awk 'FNR==NR {done[$1]=1; next} !($1 in done)' "$SUCCESS_LOG" "$LIST_PATH" | \
-        parallel --colsep '\t' --jobs "$JOBS" --halt now,fail=1 \
-          python "$MT_COPY_PY" \
-            --config "$CONFIG" --sample-id {1} --input {2} --input-type "$INPUT_TYPE" $force_arg --success-log "$SUCCESS_LOG"
+        parallel --colsep '\t' --jobs "$JOBS" run_one {1} {2} || parallel_exit=$?
     else
-      parallel --colsep '\t' --jobs "$JOBS" --halt now,fail=1 \
-        python "$MT_COPY_PY" \
-          --config "$CONFIG" --sample-id {1} --input {2} --input-type "$INPUT_TYPE" $force_arg --success-log "$SUCCESS_LOG" \
-        :::: "$LIST_PATH"
+      parallel --colsep '\t' --jobs "$JOBS" run_one {1} {2} \
+        :::: "$LIST_PATH" || parallel_exit=$?
     fi
   fi
 else
   echo "GNU parallel not found, falling back to xargs -P" >&2
-  export CONFIG
-  export FORCE_ARG="$force_arg"
-  export SUCCESS_LOG
-  export MT_COPY_PY
-  export INPUT_TYPE
   if [[ "$FORCE" -eq 1 ]]; then
-    cut -f1,2 "$LIST_PATH" | xargs -P "$JOBS" -n 2 sh -c \
-      'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --input "$2" --input-type "$INPUT_TYPE" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
-      _
+    cut -f1,2 "$LIST_PATH" | xargs -P "$JOBS" -n 2 bash -c 'run_one "$@"' _ \
+      || parallel_exit=$?
   else
     if [[ -s "$SUCCESS_LOG" ]]; then
       awk 'FNR==NR {done[$1]=1; next} !($1 in done)' "$SUCCESS_LOG" "$LIST_PATH" | \
-        xargs -P "$JOBS" -n 2 sh -c \
-          'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --input "$2" --input-type "$INPUT_TYPE" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
-          _
+        xargs -P "$JOBS" -n 2 bash -c 'run_one "$@"' _ || parallel_exit=$?
     else
-      cut -f1,2 "$LIST_PATH" | xargs -P "$JOBS" -n 2 sh -c \
-        'python "$MT_COPY_PY" --config "$CONFIG" --sample-id "$1" --input "$2" --input-type "$INPUT_TYPE" $FORCE_ARG --success-log "$SUCCESS_LOG"' \
-        _
+      cut -f1,2 "$LIST_PATH" | xargs -P "$JOBS" -n 2 bash -c 'run_one "$@"' _ \
+        || parallel_exit=$?
     fi
   fi
+fi
+
+fail_count=$(awk 'NR>1 {count++} END {print count+0}' "$FAIL_LOG")
+echo "FAIL_COUNT\t$fail_count"
+if [[ $parallel_exit -ne 0 ]]; then
+  echo "PARALLEL_EXIT\t$parallel_exit"
 fi
 
 python "$MERGE_PY" \
