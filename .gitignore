@@ -1,7 +1,7 @@
 # 忽略项目根下的 log 目录以及所有子文件
 /log/
 # 忽略4-Mutect2/conf/ 目录下的所有文件
-4-Mutect2/conf/*
+4-Mutect2/conf/GCA_000001405*
 
 # 忽略所有以 .log 结尾的日志文件（如 error.log, access.log）
 *.log
