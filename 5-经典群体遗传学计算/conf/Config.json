@@ -1,0 +1,45 @@
+{
+  "project_name": "human_mt_diversity_demo",
+  "input_vcf": "data/merged_clean.vcf.gz",
+  "sample_table": "meta/Population_Count20.list.tsv",
+  "sample_id_column": "ID",
+  "group_column": "Group",
+  "min_group_size": 20,
+  "contig_name": "chrM",
+  "sequence_length": 16569,
+  "output_dir": "output",
+  "tmp_dir": "data/tmp",
+  "meta_dir": "meta",
+  "log_dir": "logs",
+  "metrics": {
+    "within_groups": [
+      "pi",
+      "theta_w",
+      "tajima_d",
+      "haplotype_diversity"
+    ],
+    "between_groups": [
+      "dxy",
+      "hudson_fst"
+    ]
+  },
+  "windows": {
+    "enable": false,
+    "size": 500,
+    "step": 250
+  },
+  "resampling": {
+    "enable": false,
+    "sample_size_strategy": "min_group_size",
+    "bootstrap_replicates": 1000,
+    "random_seed": 42
+  },
+  "runtime": {
+    "python_bin": "/home/luolintao/miniconda3/envs/ScikitAllele/bin/python",
+    "n_threads": 4,
+    "overwrite_zarr": true,
+    "zarr_chunk_length": 2048,
+    "zarr_chunk_width": 256,
+    "alt_number": 8
+  }
+}

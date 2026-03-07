@@ -1,0 +1,2 @@
+n_groups	n_pairs	resample_n	sample_size_strategy	bootstrap_enabled	bootstrap_replicates_requested	random_seed	within_metric_count	between_metric_count	window_bootstrap_enabled
+170	14365	20	min_group_size	1	50	42	4	2	0

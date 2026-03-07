@@ -1,65 +1,135 @@
-# 经典群体遗传学计算
+# scikit-allel Diversity Pipeline
 
-该模块通过统一脚本 `pipe/1-run.sh` 读取配置文件，完成样本表过滤与主流程分析。脚本支持断点续跑、日志追踪、可选复杂变异跳过与显著性分析。
+该项目按 `pipeline-coding-standard` 组织，使用 `pipe/pipeline.sh` 调度多个双模式 Python 模块。
 
-## 目录结构
+当前支持两类运行模式：
+- 常规统计：默认启用
+- 统一降采样 + 样本 bootstrap：由 `conf/Config.json` 中 `resampling.enable` 显式控制，默认关闭
 
-```
-conf/
-log/
-output/
-python/
-script/
-```
-
-## 快速开始
-
-1. 编辑配置文件（示例：`conf/1-run.conf`）。
-2. 运行流程：
+## 运行
 
 ```bash
-bash pipe/1-run.sh conf/1-run.conf
+cd /mnt/c/Users/Administrator/Desktop/scikit-allel
+conda create -y -n ScikitAllele -c conda-forge --override-channels python=3.10 numpy=1.26 pandas pyyaml zarr=2.18 numcodecs pip
+conda run -n ScikitAllele pip install -r requirements.txt
+bash pipe/pipeline.sh conf/Config.json
 ```
 
-如需强制重跑，将配置中的 `FORCE` 设为 `true`。
+若要运行 demo bootstrap：
 
-## 配置项说明（1-run.conf）
-
-`1-run.sh` 通过 `source` 读取配置，常用字段如下：
-
-- `PROJECT_DIR`：模块根目录。
-- `VCF_PATH`：输入 VCF（可为 bgzip 压缩）。
-- `SAMPLE_TABLE_PATH`：样本信息表。
-- `FILTERED_SAMPLE_TABLE_PATH`：过滤后的样本表输出路径。
-- `OUTPUT_DIR`：主输出目录。
-- `LOG_DIR`：日志目录。
-- `GROUP_COLS`：分群列名，逗号分隔（例如 `Population,Region`）。
-- `ID_COL`：样本 ID 列名。
-- `CHROM_NAME`：染色体名（如 `chrM`）。
-- `USE_FILTERED_TABLE`：是否执行样本表过滤（`true/false`）。
-- `SKIP_COMPLEX_VARIANTS`：是否跳过复杂变异（`true/false`）。
-- `ENABLE_SIGNIFICANCE`：是否启用显著性分析（`true/false`）。
-- `PERMUTATION_N`：置换次数（默认 1000）。
-- `BOOTSTRAP_N`：bootstrap 次数（默认 1000）。
-- `RANDOM_SEED`：随机种子（可选）。
-- `CONDA_ENV`：运行脚本的 conda 环境名。
-- `FORCE`：是否忽略成功日志强制重跑（`true/false`）。
-
-## 执行流程说明
-
-1. 初始化日志并记录参数。
-2. 若日志中已出现 `SUCCESS` 且 `FORCE != true`，则跳过执行。
-3. 可选：运行 `python/filter_sample_table.py` 过滤样本表。
-4. 运行主分析脚本 `python/population_genetics.py`。
-5. 完成后写入 `SUCCESS` 标记。
-
-## 日志与断点续跑
-
-- 日志文件：`log/1-run.sh.log`（自动追加）。
-- 断点续跑：检测到 `SUCCESS` 将自动退出。
-
-## 常见注意事项
-
-- 每个群体样本数需 ≥2，否则主程序会报错。
-- 变异过滤策略会显著影响统计量，建议固定过滤规则后再做比较。
+```bash
+bash pipe/pipeline.sh conf/Config.bootstrap_demo.json
 ```
+
+## 输入
+
+- `data/merged_clean.vcf.gz`
+- `meta/Population_Count20.list.tsv`
+
+## ⚙️ 配置说明
+
+主配置文件是 `conf/Config.json`。`conf/Config.bootstrap_demo.json` 是一个开启 bootstrap、并把重复次数降到 `50` 的示例配置。
+
+### 🧾 顶层字段
+
+- `project_name`
+  用于命名中间 Zarr 目录等产物。
+- `input_vcf`
+  输入 VCF 文件路径，建议使用 `bgzip` 压缩的 `.vcf.gz`。
+- `sample_table`
+  样本分组表路径，至少需要样本 ID 列和群体列。
+- `sample_id_column`
+  样本 ID 列名，默认示例为 `ID`。
+- `group_column`
+  群体列名，默认示例为 `Group`。
+- `min_group_size`
+  预处理时保留群体的最小样本数，小于该值的群体会被过滤。
+- `contig_name`
+  要分析的 contig 名称。当前示例是 `chrM`。
+- `sequence_length`
+  分析区域长度。对 `pi`、`theta_w`、`dxy` 这类按长度归一化的指标很重要。
+
+### 📏 `sequence_length` 是否必须？
+
+- 从“程序能否运行”的角度：不是绝对必须。
+- 从“统计结果是否合理”的角度：强烈建议填写真实长度。
+- 当前实现中，如果 `sequence_length <= 0`，程序会退回到“该 contig 的最大变异位点坐标”作为长度。
+- 这会影响多样性指标的分母，可能造成系统偏差。
+- 对 mtDNA 示例，建议继续使用 `16569`。
+
+### 📂 路径相关字段
+
+- `output_dir`
+  输出目录根路径。
+- `tmp_dir`
+  中间文件目录，主要用于 Zarr。
+- `meta_dir`
+  元数据与预处理表格输出目录。
+- `log_dir`
+  日志目录。
+
+### 🧬 `metrics`
+
+- `within_groups`
+  群体内指标列表。当前支持：
+  - `pi`
+  - `theta_w`
+  - `tajima_d`
+  - `haplotype_diversity`
+- `between_groups`
+  群体间指标列表。当前支持：
+  - `dxy`
+  - `hudson_fst`
+
+### 🪟 `windows`
+
+- `enable`
+  是否开启滑窗统计，默认 `false`。
+- `size`
+  滑窗大小。
+- `step`
+  滑窗步长。
+
+### 🔁 `resampling`
+
+- `enable`
+  是否开启统一降采样 + 样本 bootstrap。默认必须为 `false`。
+- `sample_size_strategy`
+  当前只支持 `min_group_size`，表示每个群体统一降采样到最小群体样本数。
+- `bootstrap_replicates`
+  bootstrap 重复次数。正式分析可设为 `1000`，demo 示例使用 `50`。
+- `random_seed`
+  随机种子，用于保证 bootstrap 可复现。
+
+### 🚀 `runtime`
+
+- `python_bin`
+  Python 解释器路径，当前指向 `ScikitAllele` conda 环境。
+- `n_threads`
+  并行线程或进程数。常规统计主要影响 bootstrap 并行。
+- `overwrite_zarr`
+  是否覆盖已有 Zarr 中间文件。
+- `zarr_chunk_length`
+  Zarr 按变异位点切块的长度。
+- `zarr_chunk_width`
+  Zarr 按样本方向切块的宽度。
+- `alt_number`
+  导入 VCF 时允许的 ALT 等位基因上限。
+
+### ✅ 推荐用法
+
+- 常规汇总分析：使用 `conf/Config.json`
+- 示例 bootstrap 验证：使用 `conf/Config.bootstrap_demo.json`
+- 正式 bootstrap 分析：把 `conf/Config.json` 中 `resampling.enable` 改为 `true`，再把 `bootstrap_replicates` 调到目标值
+
+## 输出
+
+- `output/0-qc/input_summary.tsv`
+- `output/1-within/within_group_summary.tsv`
+- `output/2-between/between_group_summary.tsv`
+- `output/3-windows/windowed_metrics.tsv`
+- `output/4-bootstrap/within_group_bootstrap_summary.tsv`
+- `output/4-bootstrap/between_group_bootstrap_summary.tsv`
+- `output/4-bootstrap/bootstrap_run_summary.tsv`
+
+默认示例配置关闭滑窗统计，也关闭 bootstrap；如需开启，可编辑 `conf/Config.json` 中的 `windows.enable` 和 `resampling.enable`。`conf/Config.bootstrap_demo.json` 已提供一个开启 bootstrap 且将重复次数设为 `50` 的示例。
