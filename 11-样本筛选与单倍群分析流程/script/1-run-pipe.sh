@@ -744,6 +744,41 @@ run_step_11() {
     mark_step_completed $step_num "$step_name"
 }
 
+# 第十二步：四川省各市样本数量柱状图
+run_step_12() {
+    local step_num=12
+    local step_name="四川省各市样本数量柱状图"
+
+    if is_step_completed $step_num "$step_name"; then
+        log_info "⊘ 步骤 $step_num 已完成，跳过"
+        return 0
+    fi
+
+    log_info "▶ 开始步骤 $step_num：$step_name"
+
+    local PYTHON_SCRIPT="${PYTHON_DIR}/sichuan_city_barplot.py"
+    local INPUT_CSV="${OUTPUT_DIR}/本次研究样本基本信息.csv"
+    local OUTPUT_PDF="${BASE_DIR}/output/四川省各市样本数量/Sichuan_city_sample_count.pdf"
+    local OUTPUT_CSV="${BASE_DIR}/output/四川省各市样本数量/Sichuan_city_sample_count.csv"
+
+    if [ ! -f "$INPUT_CSV" ]; then
+        log_error "缺失样本基本信息（需先完成第2步）：$INPUT_CSV"
+        return 1
+    fi
+
+    mkdir -p "${BASE_DIR}/output/四川省各市样本数量"
+
+    if ! $PYTHON3 "$PYTHON_SCRIPT" \
+        --input "$INPUT_CSV" \
+        --output-pdf "$OUTPUT_PDF" \
+        --output-csv "$OUTPUT_CSV"; then
+        log_error "❌ 四川省各市样本数量柱状图生成失败"
+        return 1
+    fi
+
+    mark_step_completed $step_num "$step_name"
+}
+
 main() {
     # 检查所有输入文件
     check_required_files
@@ -760,6 +795,7 @@ main() {
     run_step_9 || exit 1   # 频率柱状图（全球+中国）
     run_step_10 || exit 1  # PCA可视化（全球+中国）
     run_step_11 || exit 1  # 频率热图可视化（全球+中国）
+    run_step_12 || exit 1  # 四川省各市样本数量柱状图
     
     log_success "========== 流程执行完成 =========="
 }
