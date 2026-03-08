@@ -127,6 +127,70 @@ def summarize_bootstrap_array(values: np.ndarray) -> tuple[np.ndarray, np.ndarra
     return valid_counts, mean_values, std_values, p2_5, p50, p97_5
 
 
+def build_within_replicate_rows(
+    values: np.ndarray,
+    group_names: list[str],
+    metric_names: list[str],
+    bootstrap_replicates: int,
+    resample_n: int,
+    within_reference_map: dict[tuple[str, str], object],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for group_index, group_name in enumerate(group_names):
+        for metric_index, metric_name in enumerate(metric_names):
+            reference_row = within_reference_map[(group_name, metric_name)]
+            metric_values = values[group_index, metric_index, :]
+            for replicate_id in range(bootstrap_replicates):
+                value = metric_values[replicate_id]
+                rows.append(
+                    {
+                        "group": group_name,
+                        "original_n_samples": int(reference_row.original_n_samples),
+                        "resample_n": resample_n,
+                        "bootstrap_replicates_requested": bootstrap_replicates,
+                        "replicate_id": replicate_id,
+                        "metric": metric_name,
+                        "full_data_value": float(reference_row.full_data_value),
+                        "value": float(value),
+                        "is_valid": 0 if np.isnan(value) else 1,
+                    }
+                )
+    return rows
+
+
+def build_between_replicate_rows(
+    values: np.ndarray,
+    group_pairs: list[tuple[str, str]],
+    metric_names: list[str],
+    bootstrap_replicates: int,
+    resample_n: int,
+    between_reference_map: dict[tuple[str, str, str], object],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for pair_index, (group1, group2) in enumerate(group_pairs):
+        for metric_index, metric_name in enumerate(metric_names):
+            reference_row = between_reference_map[(group1, group2, metric_name)]
+            metric_values = values[pair_index, metric_index, :]
+            for replicate_id in range(bootstrap_replicates):
+                value = metric_values[replicate_id]
+                rows.append(
+                    {
+                        "group1": group1,
+                        "group2": group2,
+                        "original_n_samples_group1": int(reference_row.original_n_samples_group1),
+                        "original_n_samples_group2": int(reference_row.original_n_samples_group2),
+                        "resample_n": resample_n,
+                        "bootstrap_replicates_requested": bootstrap_replicates,
+                        "replicate_id": replicate_id,
+                        "metric": metric_name,
+                        "full_data_value": float(reference_row.full_data_value),
+                        "value": float(value),
+                        "is_valid": 0 if np.isnan(value) else 1,
+                    }
+                )
+    return rows
+
+
 def build_chunks(total_replicates: int, n_threads: int) -> list[list[int]]:
     if total_replicates < 1:
         return []
@@ -152,6 +216,9 @@ def run(
     within_bootstrap_output: str,
     between_bootstrap_output: str,
     run_summary_output: str,
+    write_replicate_tables: int,
+    within_replicates_output: str,
+    between_replicates_output: str,
     n_threads: int,
 ) -> dict[str, int]:
     if bootstrap_replicates < 1:
@@ -176,6 +243,9 @@ def run(
     Path(within_bootstrap_output).parent.mkdir(parents=True, exist_ok=True)
     Path(between_bootstrap_output).parent.mkdir(parents=True, exist_ok=True)
     Path(run_summary_output).parent.mkdir(parents=True, exist_ok=True)
+    if write_replicate_tables:
+        Path(within_replicates_output).parent.mkdir(parents=True, exist_ok=True)
+        Path(between_replicates_output).parent.mkdir(parents=True, exist_ok=True)
 
     within_values = np.full((len(group_names), len(within_metric_list), bootstrap_replicates), np.nan, dtype=np.float32)
     between_values = np.full(
@@ -288,6 +358,34 @@ def run(
 
     pd.DataFrame(within_rows).to_csv(within_bootstrap_output, sep="\t", index=False)
     pd.DataFrame(between_rows).to_csv(between_bootstrap_output, sep="\t", index=False)
+    within_replicate_rows = 0
+    between_replicate_rows = 0
+    if write_replicate_tables:
+        within_replicate_frame = pd.DataFrame(
+            build_within_replicate_rows(
+                values=within_values,
+                group_names=group_names,
+                metric_names=within_metric_list,
+                bootstrap_replicates=bootstrap_replicates,
+                resample_n=resample_n,
+                within_reference_map=within_reference_map,
+            )
+        )
+        between_replicate_frame = pd.DataFrame(
+            build_between_replicate_rows(
+                values=between_values,
+                group_pairs=group_pairs,
+                metric_names=between_metric_list,
+                bootstrap_replicates=bootstrap_replicates,
+                resample_n=resample_n,
+                between_reference_map=between_reference_map,
+            )
+        )
+        within_replicate_frame.to_csv(within_replicates_output, sep="\t", index=False)
+        between_replicate_frame.to_csv(between_replicates_output, sep="\t", index=False)
+        within_replicate_rows = int(len(within_replicate_frame))
+        between_replicate_rows = int(len(between_replicate_frame))
+
     pd.DataFrame(
         [
             {
@@ -301,6 +399,9 @@ def run(
                 "within_metric_count": len(within_metric_list),
                 "between_metric_count": len(between_metric_list),
                 "window_bootstrap_enabled": 0,
+                "replicate_tables_enabled": int(bool(write_replicate_tables)),
+                "within_replicate_rows": within_replicate_rows,
+                "between_replicate_rows": between_replicate_rows,
             }
         ]
     ).to_csv(run_summary_output, sep="\t", index=False)
@@ -311,10 +412,18 @@ def run(
         len(group_pairs),
         resample_n,
     )
+    if write_replicate_tables:
+        log.info(
+            "Wrote bootstrap replicate tables with %d within rows and %d between rows",
+            within_replicate_rows,
+            between_replicate_rows,
+        )
     return {
         "within_rows": len(within_rows),
         "between_rows": len(between_rows),
         "resample_n": resample_n,
+        "within_replicate_rows": within_replicate_rows,
+        "between_replicate_rows": between_replicate_rows,
     }
 
 
@@ -336,6 +445,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--within-bootstrap-output", required=True)
     parser.add_argument("--between-bootstrap-output", required=True)
     parser.add_argument("--run-summary-output", required=True)
+    parser.add_argument("--write-replicate-tables", type=int, default=0)
+    parser.add_argument("--within-replicates-output", required=True)
+    parser.add_argument("--between-replicates-output", required=True)
     parser.add_argument("--n-threads", type=int, default=1)
     return parser
 
@@ -360,6 +472,9 @@ def main(argv: list[str] | None = None) -> int:
         within_bootstrap_output=args.within_bootstrap_output,
         between_bootstrap_output=args.between_bootstrap_output,
         run_summary_output=args.run_summary_output,
+        write_replicate_tables=args.write_replicate_tables,
+        within_replicates_output=args.within_replicates_output,
+        between_replicates_output=args.between_replicates_output,
         n_threads=args.n_threads,
     )
     return 0

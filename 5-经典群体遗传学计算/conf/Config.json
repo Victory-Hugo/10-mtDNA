@@ -32,7 +32,8 @@
     "enable": false,
     "sample_size_strategy": "min_group_size",
     "bootstrap_replicates": 1000,
-    "random_seed": 42
+    "random_seed": 42,
+    "write_replicate_tables": false
   },
   "runtime": {
     "python_bin": "/home/luolintao/miniconda3/envs/ScikitAllele/bin/python",

@@ -57,6 +57,13 @@ def load_config(config_path: str, project_root: str | None = None) -> dict[str, 
         "WITHIN_BOOTSTRAP_SUMMARY_TSV": str(Path(output_dir) / "4-bootstrap" / "within_group_bootstrap_summary.tsv"),
         "BETWEEN_BOOTSTRAP_SUMMARY_TSV": str(Path(output_dir) / "4-bootstrap" / "between_group_bootstrap_summary.tsv"),
         "BOOTSTRAP_RUN_SUMMARY_TSV": str(Path(output_dir) / "4-bootstrap" / "bootstrap_run_summary.tsv"),
+        "WRITE_BOOTSTRAP_REPLICATE_TABLES": "1" if resampling.get("write_replicate_tables", False) else "0",
+        "WITHIN_BOOTSTRAP_REPLICATES_TSV": str(
+            Path(output_dir) / "4-bootstrap" / "within_group_bootstrap_replicates.tsv"
+        ),
+        "BETWEEN_BOOTSTRAP_REPLICATES_TSV": str(
+            Path(output_dir) / "4-bootstrap" / "between_group_bootstrap_replicates.tsv"
+        ),
         "ZARR_PATH": str(Path(tmp_dir) / f"{project_name}.zarr"),
         "WITHIN_METRICS": ",".join(metrics.get("within_groups", [])),
         "BETWEEN_METRICS": ",".join(metrics.get("between_groups", [])),

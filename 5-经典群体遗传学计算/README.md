@@ -28,7 +28,7 @@ bash pipe/pipeline.sh conf/Config.bootstrap_demo.json
 
 ## ⚙️ 配置说明
 
-主配置文件是 `conf/Config.json`。`conf/Config.bootstrap_demo.json` 是一个开启 bootstrap、并把重复次数降到 `50` 的示例配置。
+主配置文件是 `conf/Config.json`。`conf/Config.bootstrap_demo.json` 是一个开启 bootstrap 的示例配置，具体重复次数以其中的 `bootstrap_replicates` 为准。
 
 ### 🧾 顶层字段
 
@@ -97,9 +97,11 @@ bash pipe/pipeline.sh conf/Config.bootstrap_demo.json
 - `sample_size_strategy`
   当前只支持 `min_group_size`，表示每个群体统一降采样到最小群体样本数。
 - `bootstrap_replicates`
-  bootstrap 重复次数。正式分析可设为 `1000`，demo 示例使用 `50`。
+  bootstrap 重复次数。常见正式分析可设为 `1000`，也可以按算力和输出体量调整。
 - `random_seed`
   随机种子，用于保证 bootstrap 可复现。
+- `write_replicate_tables`
+  是否额外输出每一次 bootstrap 的明细结果。默认 `false`。开启后会生成 replicate-level TSV，便于查看“某个群体做了第几次抽样、这一次算出的数值是多少”。
 
 ### 🚀 `runtime`
 
@@ -131,5 +133,7 @@ bash pipe/pipeline.sh conf/Config.bootstrap_demo.json
 - `output/4-bootstrap/within_group_bootstrap_summary.tsv`
 - `output/4-bootstrap/between_group_bootstrap_summary.tsv`
 - `output/4-bootstrap/bootstrap_run_summary.tsv`
+- `output/4-bootstrap/within_group_bootstrap_replicates.tsv`（仅当 `resampling.write_replicate_tables=true` 时生成）
+- `output/4-bootstrap/between_group_bootstrap_replicates.tsv`（仅当 `resampling.write_replicate_tables=true` 时生成）
 
-默认示例配置关闭滑窗统计，也关闭 bootstrap；如需开启，可编辑 `conf/Config.json` 中的 `windows.enable` 和 `resampling.enable`。`conf/Config.bootstrap_demo.json` 已提供一个开启 bootstrap 且将重复次数设为 `50` 的示例。
+默认主配置关闭滑窗统计，也关闭 bootstrap；如需开启，可编辑 `conf/Config.json` 中的 `windows.enable` 和 `resampling.enable`。`conf/Config.bootstrap_demo.json` 提供了一个开启 bootstrap 的示例配置，是否额外输出每次 replicate 明细则由 `resampling.write_replicate_tables` 控制。

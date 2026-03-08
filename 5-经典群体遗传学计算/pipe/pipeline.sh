@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONFIG_PATH="${1:-$ROOT_DIR/conf/Config.json}"
+#! 修改CONFIG_PATH为实际配置文件路径
+CONFIG_PATH="${1:-$ROOT_DIR/conf/Config.bootstrap_demo.json}" 
 
 if [[ ! -f "$CONFIG_PATH" ]]; then
   echo "Config file not found: $CONFIG_PATH" >&2
@@ -76,6 +77,9 @@ if [[ "$RESAMPLING_ENABLE" == "1" ]]; then
     --within-bootstrap-output "$WITHIN_BOOTSTRAP_SUMMARY_TSV" \
     --between-bootstrap-output "$BETWEEN_BOOTSTRAP_SUMMARY_TSV" \
     --run-summary-output "$BOOTSTRAP_RUN_SUMMARY_TSV" \
+    --write-replicate-tables "$WRITE_BOOTSTRAP_REPLICATE_TABLES" \
+    --within-replicates-output "$WITHIN_BOOTSTRAP_REPLICATES_TSV" \
+    --between-replicates-output "$BETWEEN_BOOTSTRAP_REPLICATES_TSV" \
     --n-threads "$N_THREADS"
 else
   echo "Bootstrap disabled by config"
