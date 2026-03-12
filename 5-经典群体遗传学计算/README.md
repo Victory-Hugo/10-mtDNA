@@ -95,7 +95,11 @@ bash pipe/pipeline.sh conf/Config.bootstrap_demo.json
 - `enable`
   是否开启统一降采样 + 样本 bootstrap。默认必须为 `false`。
 - `sample_size_strategy`
-  当前只支持 `min_group_size`，表示每个群体统一降采样到最小群体样本数。
+  当前支持两种模式：
+  - `min_group_size`：每个群体统一降采样到当前保留群体中的最小样本数。
+  - `resampling_downsample`：每个群体固定按 `resampling_downsample` 指定的样本数进行有放回抽样。
+- `resampling_downsample`
+  当 `sample_size_strategy = resampling_downsample` 时生效。表示每次 bootstrap 时每个群体固定抽取多少个样本，默认可设为 `20`。
 - `bootstrap_replicates`
   bootstrap 重复次数。常见正式分析可设为 `1000`，也可以按算力和输出体量调整。
 - `random_seed`

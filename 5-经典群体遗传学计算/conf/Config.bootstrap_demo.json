@@ -30,7 +30,8 @@
   },
   "resampling": {
     "enable": true,
-    "sample_size_strategy": "min_group_size",
+    "sample_size_strategy": "resampling_downsample",
+    "resampling_downsample": 20,
     "bootstrap_replicates": 1000,
     "random_seed": 42,
     "write_replicate_tables": true

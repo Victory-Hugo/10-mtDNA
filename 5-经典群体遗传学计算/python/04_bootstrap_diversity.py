@@ -75,12 +75,20 @@ def _run_bootstrap_chunk(replicate_ids: list[int]) -> tuple[list[int], np.ndarra
     return replicate_ids, within_chunk, between_chunk
 
 
-def choose_resample_size(group_to_indices: dict[str, np.ndarray], strategy: str) -> int:
-    if strategy != "min_group_size":
-        raise ValueError(f"Unsupported sample_size_strategy: {strategy}")
+def choose_resample_size(
+    group_to_indices: dict[str, np.ndarray],
+    strategy: str,
+    resampling_downsample: int,
+) -> int:
     if len(group_to_indices) < 2:
         raise ValueError("At least two groups are required for bootstrap analysis.")
-    return min(int(len(indices)) for indices in group_to_indices.values())
+    if strategy == "min_group_size":
+        return min(int(len(indices)) for indices in group_to_indices.values())
+    if strategy == "resampling_downsample":
+        if resampling_downsample < 1:
+            raise ValueError("resampling_downsample must be >= 1 when sample_size_strategy=resampling_downsample")
+        return int(resampling_downsample)
+    raise ValueError(f"Unsupported sample_size_strategy: {strategy}")
 
 
 def load_reference_within(path: str, metrics: list[str]) -> pd.DataFrame:
@@ -211,6 +219,7 @@ def run(
     bootstrap_replicates: int,
     random_seed: int,
     sample_size_strategy: str,
+    resampling_downsample: int,
     within_reference: str,
     between_reference: str,
     within_bootstrap_output: str,
@@ -235,7 +244,7 @@ def run(
         group_column=group_column,
     )
 
-    resample_n = choose_resample_size(group_to_indices, sample_size_strategy)
+    resample_n = choose_resample_size(group_to_indices, sample_size_strategy, resampling_downsample)
     group_names = sorted(group_to_indices)
     group_pairs = list(combinations(group_names, 2))
     group_size_map = {group_name: int(len(group_to_indices[group_name])) for group_name in group_names}
@@ -393,6 +402,7 @@ def run(
                 "n_pairs": len(group_pairs),
                 "resample_n": resample_n,
                 "sample_size_strategy": sample_size_strategy,
+                "resampling_downsample": int(resampling_downsample),
                 "bootstrap_enabled": 1,
                 "bootstrap_replicates_requested": bootstrap_replicates,
                 "random_seed": random_seed,
@@ -440,6 +450,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bootstrap-replicates", type=int, required=True)
     parser.add_argument("--random-seed", type=int, required=True)
     parser.add_argument("--sample-size-strategy", required=True)
+    parser.add_argument("--resampling-downsample", type=int, default=20)
     parser.add_argument("--within-reference", required=True)
     parser.add_argument("--between-reference", required=True)
     parser.add_argument("--within-bootstrap-output", required=True)
@@ -467,6 +478,7 @@ def main(argv: list[str] | None = None) -> int:
         bootstrap_replicates=args.bootstrap_replicates,
         random_seed=args.random_seed,
         sample_size_strategy=args.sample_size_strategy,
+        resampling_downsample=args.resampling_downsample,
         within_reference=args.within_reference,
         between_reference=args.between_reference,
         within_bootstrap_output=args.within_bootstrap_output,

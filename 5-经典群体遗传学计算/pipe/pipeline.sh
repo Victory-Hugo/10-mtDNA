@@ -72,6 +72,7 @@ if [[ "$RESAMPLING_ENABLE" == "1" ]]; then
     --bootstrap-replicates "$BOOTSTRAP_REPLICATES" \
     --random-seed "$BOOTSTRAP_RANDOM_SEED" \
     --sample-size-strategy "$RESAMPLE_STRATEGY" \
+    --resampling-downsample "$RESAMPLING_DOWNSAMPLE" \
     --within-reference "$WITHIN_SUMMARY_TSV" \
     --between-reference "$BETWEEN_SUMMARY_TSV" \
     --within-bootstrap-output "$WITHIN_BOOTSTRAP_SUMMARY_TSV" \
