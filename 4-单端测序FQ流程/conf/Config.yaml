@@ -1,0 +1,28 @@
+paths:
+  list_tsv: "/mnt/f/onedrive/文档（科研）/脚本/Download/10-mtDNA/4-单端测序FQ流程/conf/list.tsv"
+  fastq_dir: "/mnt/l/fastq/data"
+  output_dir: "/mnt/l/fastq/output"
+  python_dir: "/mnt/f/onedrive/文档（科研）/脚本/Download/10-mtDNA/4-单端测序FQ流程/python"
+  reference_fasta: "/mnt/f/onedrive/文档（科研）/脚本/Download/10-mtDNA/4-单端测序FQ流程/data/reference/chrM_rCRS.fasta"
+  shifted_reference_fasta: "/mnt/f/onedrive/文档（科研）/脚本/Download/10-mtDNA/4-单端测序FQ流程/data/reference/chrM_rCRS.shifted.fa"
+  reference_cache_dir: "/mnt/l/fastq/output/_reference_cache"
+  haplogrep_dir: "/mnt/f/onedrive/文档（科研）/脚本/Download/10-mtDNA/4-单端测序FQ流程/data/software/haplogrep3"
+  haplogrep_jar: "/mnt/f/onedrive/文档（科研）/脚本/Download/10-mtDNA/4-单端测序FQ流程/data/software/haplogrep3/haplogrep3.jar"
+  haplogrep_wrapper: "/mnt/f/onedrive/文档（科研）/脚本/Download/10-mtDNA/4-单端测序FQ流程/data/software/haplogrep3/haplogrep3"
+
+runtime:
+  conda_env: "BigLin"
+  threads: 16
+  min_mapq: 20
+  min_baseq: 20
+  strict_min_dp: 100
+  strict_min_vaf: 0.75
+  java_heap_gb: 4
+
+tools:
+  conda: "/home/luolintao/miniconda3/bin/conda"
+  python: "/home/luolintao/miniconda3/envs/BigLin/bin/python"
+  bwa: "/home/luolintao/miniconda3/envs/BigLin/bin/bwa"
+  samtools: "/home/luolintao/miniconda3/envs/BigLin/bin/samtools"
+  bcftools: "/home/luolintao/miniconda3/envs/BigLin/bin/bcftools"
+  java: "/home/luolintao/miniconda3/envs/BigLin/bin/java"
