@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CONFIG_PATH="${PROJECT_ROOT}/conf/Config.yaml"
 MAX_SAMPLES=""
+JOBS=4
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -14,6 +15,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --max-samples)
             MAX_SAMPLES="$2"
+            shift 2
+            ;;
+        --jobs)
+            JOBS="$2"
             shift 2
             ;;
         *)
@@ -71,6 +76,10 @@ if [[ ! -f "${LIST_TSV}" ]]; then
     echo "[ERROR] list.tsv not found: ${LIST_TSV}" >&2
     exit 1
 fi
+if ! [[ "${JOBS}" =~ ^[0-9]+$ ]] || [[ "${JOBS}" -lt 1 ]]; then
+    echo "[ERROR] --jobs must be a positive integer, got: ${JOBS}" >&2
+    exit 1
+fi
 
 mkdir -p "${OUTPUT_DIR}" "${REFERENCE_CACHE_DIR}"
 
@@ -88,23 +97,29 @@ if [[ ! -f "${LOCAL_REFERENCE}.fai" ]]; then
 fi
 
 processed=0
-while IFS=$'\t' read -r sample_id fastq_path; do
-    if [[ "${sample_id}" == "ID" ]]; then
-        continue
-    fi
-    if [[ -z "${sample_id}" || -z "${fastq_path}" ]]; then
-        continue
-    fi
-    if [[ ! -f "${fastq_path}" ]]; then
-        echo "[ERROR] FASTQ not found for ${sample_id}: ${fastq_path}" >&2
-        exit 1
-    fi
+success_count=0
+failure_count=0
+declare -a ACTIVE_PIDS=()
+declare -a ACTIVE_SAMPLES=()
+
+process_sample() {
+    local sample_id="$1"
+    local fastq_path="$2"
+    local sample_root step1_dir step2_dir step3_dir rename_map raw_vcf strict_vcf raw_haplogrep_txt strict_haplogrep_txt
+    local sample_log sample_status
 
     sample_root="${OUTPUT_DIR}/${sample_id}"
     step1_dir="${sample_root}/1-bam"
     step2_dir="${sample_root}/2-vcf"
     step3_dir="${sample_root}/3-haplogrep3"
     mkdir -p "${step1_dir}" "${step2_dir}" "${step3_dir}"
+
+    sample_log="${sample_root}/pipeline.log"
+    sample_status="${sample_root}/pipeline.status"
+    : > "${sample_log}"
+    : > "${sample_status}"
+
+    exec > >(tee -a "${sample_log}") 2>&1
 
     rename_map="${step2_dir}/chr_rename.tsv"
     printf "chrM\tMT\n" > "${rename_map}"
@@ -116,7 +131,13 @@ while IFS=$'\t' read -r sample_id fastq_path; do
 
     echo "[INFO] Processing ${sample_id}"
 
-    "${CONDA_BIN}" run -n "${CONDA_ENV}" "${PYTHON_BIN}" "${PYTHON_DIR}/align_mt_reads.py" \
+    if [[ ! -f "${fastq_path}" ]]; then
+        echo "[ERROR] FASTQ not found for ${sample_id}: ${fastq_path}" >&2
+        echo "FAILED: FASTQ not found" > "${sample_status}"
+        return 1
+    fi
+
+    if ! "${CONDA_BIN}" run -n "${CONDA_ENV}" "${PYTHON_BIN}" "${PYTHON_DIR}/align_mt_reads.py" \
         --sample-id "${sample_id}" \
         --fastq "${fastq_path}" \
         --reference "${LOCAL_REFERENCE}" \
@@ -124,9 +145,13 @@ while IFS=$'\t' read -r sample_id fastq_path; do
         --threads "${THREADS}" \
         --bwa-bin "${BWA_BIN}" \
         --samtools-bin "${SAMTOOLS_BIN}" \
-        --min-mapq "${MIN_MAPQ}"
+        --min-mapq "${MIN_MAPQ}"; then
+        echo "[ERROR] align_mt_reads failed for ${sample_id}" >&2
+        echo "FAILED: align_mt_reads" > "${sample_status}"
+        return 1
+    fi
 
-    "${CONDA_BIN}" run -n "${CONDA_ENV}" "${PYTHON_BIN}" "${PYTHON_DIR}/call_mt_variants.py" \
+    if ! "${CONDA_BIN}" run -n "${CONDA_ENV}" "${PYTHON_BIN}" "${PYTHON_DIR}/call_mt_variants.py" \
         --sample-id "${sample_id}" \
         --input-bam "${step1_dir}/${sample_id}.primary.q${MIN_MAPQ}.bam" \
         --reference "${LOCAL_REFERENCE}" \
@@ -135,35 +160,47 @@ while IFS=$'\t' read -r sample_id fastq_path; do
         --threads "${THREADS}" \
         --bcftools-bin "${BCFTOOLS_BIN}" \
         --min-mapq "${MIN_MAPQ}" \
-        --min-baseq "${MIN_BASEQ}"
+        --min-baseq "${MIN_BASEQ}"; then
+        echo "[ERROR] call_mt_variants failed for ${sample_id}" >&2
+        echo "FAILED: call_mt_variants" > "${sample_status}"
+        return 1
+    fi
 
-    "${CONDA_BIN}" run -n "${CONDA_ENV}" "${PYTHON_BIN}" "${PYTHON_DIR}/filter_mt_vcf_for_haplogrep.py" \
+    if ! "${CONDA_BIN}" run -n "${CONDA_ENV}" "${PYTHON_BIN}" "${PYTHON_DIR}/filter_mt_vcf_for_haplogrep.py" \
         --input "${raw_vcf}" \
         --output "${strict_vcf}" \
         --stats "${step2_dir}/${sample_id}.strict.filter_stats.tsv" \
         --min-dp "${STRICT_MIN_DP}" \
         --min-vaf "${STRICT_MIN_VAF}" \
-        --pass-only
+        --pass-only; then
+        echo "[ERROR] filter_mt_vcf_for_haplogrep failed for ${sample_id}" >&2
+        echo "FAILED: filter_mt_vcf_for_haplogrep" > "${sample_status}"
+        return 1
+    fi
 
-    "${PROJECT_ROOT}/script/run_haplogrep_classify.sh" \
+    if ! "${PROJECT_ROOT}/script/run_haplogrep_classify.sh" \
         --conda-bin "${CONDA_BIN}" \
         --conda-env "${CONDA_ENV}" \
         --java-bin "${JAVA_BIN}" \
         --haplogrep-jar "${HAPLOGREP_JAR}" \
         --input-vcf "${raw_vcf}" \
         --output-txt "${raw_haplogrep_txt}" \
-        --heap-gb "${JAVA_HEAP_GB}"
+        --heap-gb "${JAVA_HEAP_GB}"; then
+        echo "[WARN] raw Haplogrep failed for ${sample_id}" >&2
+    fi
 
-    "${PROJECT_ROOT}/script/run_haplogrep_classify.sh" \
+    if ! "${PROJECT_ROOT}/script/run_haplogrep_classify.sh" \
         --conda-bin "${CONDA_BIN}" \
         --conda-env "${CONDA_ENV}" \
         --java-bin "${JAVA_BIN}" \
         --haplogrep-jar "${HAPLOGREP_JAR}" \
         --input-vcf "${strict_vcf}" \
         --output-txt "${strict_haplogrep_txt}" \
-        --heap-gb "${JAVA_HEAP_GB}"
+        --heap-gb "${JAVA_HEAP_GB}"; then
+        echo "[WARN] strict Haplogrep failed for ${sample_id}" >&2
+    fi
 
-    "${CONDA_BIN}" run -n "${CONDA_ENV}" "${PYTHON_BIN}" "${PYTHON_DIR}/summarize_mt_results.py" \
+    if ! "${CONDA_BIN}" run -n "${CONDA_ENV}" "${PYTHON_BIN}" "${PYTHON_DIR}/summarize_mt_results.py" \
         --sample-id "${sample_id}" \
         --raw-vcf "${raw_vcf}" \
         --strict-vcf "${strict_vcf}" \
@@ -171,12 +208,66 @@ while IFS=$'\t' read -r sample_id fastq_path; do
         --strict-haplogrep "${strict_haplogrep_txt}" \
         --strict-filter-stats "${step2_dir}/${sample_id}.strict.filter_stats.tsv" \
         --coverage-tsv "${step1_dir}/${sample_id}.primary.q${MIN_MAPQ}.coverage.tsv" \
-        --output-md "${sample_root}/${sample_id}.summary.md"
+        --output-md "${sample_root}/${sample_id}.summary.md"; then
+        echo "[WARN] summarize_mt_results failed for ${sample_id}" >&2
+    fi
 
+    echo "OK" > "${sample_status}"
+    return 0
+}
+
+reap_finished_jobs() {
+    local new_pids=()
+    local new_samples=()
+    local idx pid sample rc
+
+    for idx in "${!ACTIVE_PIDS[@]}"; do
+        pid="${ACTIVE_PIDS[$idx]}"
+        sample="${ACTIVE_SAMPLES[$idx]}"
+        if kill -0 "${pid}" 2>/dev/null; then
+            new_pids+=("${pid}")
+            new_samples+=("${sample}")
+            continue
+        fi
+        if wait "${pid}"; then
+            success_count=$((success_count + 1))
+            echo "[OK] Sample finished: ${sample}"
+        else
+            rc=$?
+            failure_count=$((failure_count + 1))
+            echo "[WARN] Sample failed and was skipped: ${sample} (exit ${rc})" >&2
+        fi
+    done
+
+    ACTIVE_PIDS=("${new_pids[@]}")
+    ACTIVE_SAMPLES=("${new_samples[@]}")
+}
+
+while IFS=$'\t' read -r sample_id fastq_path; do
+    if [[ "${sample_id}" == "ID" ]]; then
+        continue
+    fi
+    if [[ -z "${sample_id}" || -z "${fastq_path}" ]]; then
+        continue
+    fi
     processed=$((processed + 1))
+    process_sample "${sample_id}" "${fastq_path}" &
+    ACTIVE_PIDS+=("$!")
+    ACTIVE_SAMPLES+=("${sample_id}")
+
+    while [[ "${#ACTIVE_PIDS[@]}" -ge "${JOBS}" ]]; do
+        sleep 1
+        reap_finished_jobs
+    done
+
     if [[ -n "${MAX_SAMPLES}" && "${processed}" -ge "${MAX_SAMPLES}" ]]; then
         break
     fi
 done < "${LIST_TSV}"
 
-echo "[OK] Pipeline finished for ${processed} sample(s)."
+while [[ "${#ACTIVE_PIDS[@]}" -gt 0 ]]; do
+    sleep 1
+    reap_finished_jobs
+done
+
+echo "[OK] Pipeline finished for ${processed} sample(s). Success=${success_count}, Failure=${failure_count}, Jobs=${JOBS}."
