@@ -1,0 +1,18 @@
+tools:
+  python: python3
+
+paths:
+  input_file: input/ID_Hap.tsv #? 输入文件路径，格式为TSV，包含样本ID和对应的单倍群信息
+  output_dir: output
+  tree_index_file: data/phylotree_index.json
+  phylotree_table: data/phylotree_build17.tsv
+  input_correction: data/Haplogrep单倍群分型订正表.tsv
+  llt_targets: data/目标_LLT.tsv
+  llt_correction: data/错误纠正_LLT.tsv
+  yuchunli_targets: data/目标_YuChunLi.tsv
+  yuchunli_correction: data/错误纠正_YuChunLi.tsv
+
+runtime:
+  output_prefix: mtDNA_haplogroup_annotation #? 输出文件前缀，生成的文件将以此为基础命名
+  rebuild_index: true
+  log_level: INFO
