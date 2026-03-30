@@ -263,4 +263,5 @@ def run_qc(
     print(f"全部分析完成，结果已保存至：{os.path.abspath(output_dir)}")
 
 # ===================== 调用示例 =====================
-run_qc("/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/3-Haplogrep3结果整理/data/20K.txt", "/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/3-Haplogrep3结果整理/output")
+run_qc("/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/3-Haplogrep3变异解读/data/质量控制.tsv",
+     "/mnt/c/Users/Administrator/Desktop")

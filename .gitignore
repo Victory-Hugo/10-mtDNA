@@ -24,3 +24,7 @@ nohup.out
 
 /9-VerifyBamID2/data/*
 
+4-Mutect2/download/Mutect2.tar.gz
+
+4-Mutect2/bin/
+4-Mutect2/bin/jdk-17.0.2/
