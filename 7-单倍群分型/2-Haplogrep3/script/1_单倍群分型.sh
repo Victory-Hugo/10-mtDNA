@@ -5,8 +5,8 @@
 #*###############################
 
 # 设置输入和输出目录
-input_dir="/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/2-Haplogrep3/examples/input/vcf"
-output_dir="/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/2-Haplogrep3/examples/output"
+input_dir="/mnt/c/Users/Administrator/Desktop/"
+output_dir="/mnt/c/Users/Administrator/Desktop/output"
 SOFTWARE_DIR="/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/2-Haplogrep3"
 
 # 检查输出目录是否存在，如果不存在则创建
