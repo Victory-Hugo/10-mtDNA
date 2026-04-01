@@ -5,8 +5,8 @@
 #*###############################
 
 # 设置输入和输出目录
-input_dir="/mnt/c/Users/Administrator/Desktop/"
-output_dir="/mnt/c/Users/Administrator/Desktop/output"
+input_dir="/mnt/l/22-WHALE/1-数据/data/低深度/output/"
+output_dir="/mnt/l/22-WHALE/1-数据/data/低深度/fasta"
 SOFTWARE_DIR="/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/2-Haplogrep3"
 
 # 检查输出目录是否存在，如果不存在则创建
