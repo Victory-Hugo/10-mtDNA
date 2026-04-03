@@ -11,7 +11,6 @@
 
 import argparse
 import sys
-from pathlib import Path
 from typing import Optional, List
 
 import pandas as pd
@@ -249,7 +248,34 @@ def preprocess_for_frequency(
     return df_global, df_pivot_global, df_china, df_pivot_china
 
 
-def main():
+def run(
+    input: str,
+    province_mapping: str,
+    selected_cols: Optional[List[str]] = None,
+    min_count: int = 20,
+    haplogroup_col: str = "Haplogroup_YuChunLi",
+    output_prepared: Optional[str] = None,
+    output_prepared_china: Optional[str] = None,
+    output_frequency: Optional[str] = None,
+    output_frequency_china: Optional[str] = None,
+    verbose: bool = False,
+) -> int:
+    preprocess_for_frequency(
+        input_csv=input,
+        province_mapping_excel=province_mapping,
+        selected_columns=selected_cols,
+        min_sample_count=min_count,
+        haplogroup_column=haplogroup_col,
+        output_prepared_csv=output_prepared,
+        output_prepared_china_csv=output_prepared_china,
+        output_frequency_csv=output_frequency,
+        output_frequency_china_csv=output_frequency_china,
+        verbose=verbose,
+    )
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
     """命令行入口"""
     parser = argparse.ArgumentParser(
         description="频率分析前置处理：准备数据用于频率计算和PCA分析"
@@ -311,29 +337,21 @@ def main():
         action="store_true",
         help="打印详细日志"
     )
-    
-    args = parser.parse_args()
-    
+    return parser
+
+
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
     try:
-        preprocess_for_frequency(
-            input_csv=args.input,
-            province_mapping_excel=args.province_mapping,
-            selected_columns=args.selected_cols,
-            min_sample_count=args.min_count,
-            haplogroup_column=args.haplogroup_col,
-            output_prepared_csv=args.output_prepared,
-            output_prepared_china_csv=args.output_prepared_china,
-            output_frequency_csv=args.output_frequency,
-            output_frequency_china_csv=args.output_frequency_china,
-            verbose=args.verbose
-        )
-        sys.exit(0)
+        return run(**vars(args))
     except Exception as e:
         print(f"❌ 错误：{e}", file=sys.stderr)
         import traceback
         traceback.print_exc()
-        sys.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

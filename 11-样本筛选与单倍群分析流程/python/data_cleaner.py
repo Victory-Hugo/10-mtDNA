@@ -8,12 +8,11 @@
   2. 模块导入：from data_cleaner import clean_sample_info
 """
 
-import argparse
-import sys
 import re
 import unicodedata
-from pathlib import Path
 from typing import Optional, List, Dict
+import argparse
+import sys
 
 import pandas as pd
 
@@ -111,6 +110,10 @@ def clean_sample_info(
     input_excel: str,
     mapping_excel: str,
     new_sample_source: str,
+    sample_meta_sheet: str,
+    ethnicity_mapping_sheet: str,
+    country_mapping_sheet: str,
+    province_mapping_sheet: str,
     country_extra_cols: Optional[List[str]] = None,
     ethnicity_extra_cols: Optional[List[str]] = None,
     selected_columns: Optional[List[str]] = None,
@@ -121,9 +124,13 @@ def clean_sample_info(
     按照原笔记本的顺序进行样本筛选和清洗。
     
     参数：
-        input_excel: 输入Excel文件路径（包含'现代线粒体DNA汇总' sheet）
+        input_excel: 输入Excel文件路径
         mapping_excel: 基础信息速查表Excel文件路径
         new_sample_source: 新样本的Source值（用于筛选WHALE样本）
+        sample_meta_sheet: 主样本信息 sheet 名
+        ethnicity_mapping_sheet: 民族映射 sheet 名
+        country_mapping_sheet: 国家映射 sheet 名
+        province_mapping_sheet: 省份映射 sheet 名
         country_extra_cols: 从国家映射表中提取的额外列名
         ethnicity_extra_cols: 从民族映射表中提取的额外列名
         selected_columns: 需要选择的列名列表
@@ -137,7 +144,7 @@ def clean_sample_info(
     if verbose:
         print("[步骤1] 读取元数据...")
     
-    df_meta = pd.read_excel(input_excel, sheet_name='现代线粒体DNA汇总')
+    df_meta = pd.read_excel(input_excel, sheet_name=sample_meta_sheet)
     
     if verbose:
         print(f"  总样本数：{len(df_meta)}")
@@ -172,9 +179,9 @@ def clean_sample_info(
         print("[步骤5] 读取映射表并标准化处理...")
     
     # 读取映射表
-    df_民族 = pd.read_excel(mapping_excel, sheet_name='中外各民族名称的罗马字母拼写法')
-    df_国家 = pd.read_excel(mapping_excel, sheet_name='海外国家')
-    df_省份 = pd.read_excel(mapping_excel, sheet_name='省份中华英文')
+    df_民族 = pd.read_excel(mapping_excel, sheet_name=ethnicity_mapping_sheet)
+    df_国家 = pd.read_excel(mapping_excel, sheet_name=country_mapping_sheet)
+    df_省份 = pd.read_excel(mapping_excel, sheet_name=province_mapping_sheet)
     
     # 清理映射表的空白
     df_民族 = df_民族.map(lambda x: x.strip() if isinstance(x, str) else x)
@@ -308,8 +315,36 @@ def clean_sample_info(
     return df_new
 
 
-def main():
-    """命令行入口"""
+def run(
+    input: str,
+    mapping: str,
+    new_source: str,
+    sample_meta_sheet: str,
+    ethnicity_mapping_sheet: str,
+    country_mapping_sheet: str,
+    province_mapping_sheet: str,
+    country_cols: Optional[List[str]] = None,
+    ethnicity_cols: Optional[List[str]] = None,
+    output: Optional[str] = None,
+    verbose: bool = False,
+) -> int:
+    clean_sample_info(
+        input_excel=input,
+        mapping_excel=mapping,
+        new_sample_source=new_source,
+        sample_meta_sheet=sample_meta_sheet,
+        ethnicity_mapping_sheet=ethnicity_mapping_sheet,
+        country_mapping_sheet=country_mapping_sheet,
+        province_mapping_sheet=province_mapping_sheet,
+        country_extra_cols=country_cols,
+        ethnicity_extra_cols=ethnicity_cols,
+        output_csv=output,
+        verbose=verbose,
+    )
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="样本筛选和清洗：按照原笔记本的顺序进行操作"
     )
@@ -327,6 +362,26 @@ def main():
         "--new-source", "-s",
         required=True,
         help="新样本的Source值（用于筛选WHALE样本）"
+    )
+    parser.add_argument(
+        "--sample-meta-sheet",
+        required=True,
+        help="主样本信息 sheet 名"
+    )
+    parser.add_argument(
+        "--ethnicity-mapping-sheet",
+        required=True,
+        help="民族映射 sheet 名"
+    )
+    parser.add_argument(
+        "--country-mapping-sheet",
+        required=True,
+        help="国家映射 sheet 名"
+    )
+    parser.add_argument(
+        "--province-mapping-sheet",
+        required=True,
+        help="省份映射 sheet 名"
     )
     parser.add_argument(
         "--country-cols", "-cc",
@@ -350,24 +405,19 @@ def main():
         action="store_true",
         help="打印详细日志"
     )
-    
-    args = parser.parse_args()
-    
+    return parser
+
+
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
     try:
-        clean_sample_info(
-            input_excel=args.input,
-            mapping_excel=args.mapping,
-            new_sample_source=args.new_source,
-            country_extra_cols=args.country_cols,
-            ethnicity_extra_cols=args.ethnicity_cols,
-            output_csv=args.output,
-            verbose=args.verbose
-        )
-        sys.exit(0)
+        return run(**vars(args))
     except Exception as e:
         print(f"❌ 错误：{e}", file=sys.stderr)
-        sys.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

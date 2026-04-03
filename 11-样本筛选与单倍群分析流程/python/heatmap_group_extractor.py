@@ -23,7 +23,7 @@ import pandas as pd
 def run(
     input_csv: str,
     group_col: str = "Group",
-    output_dir: str = "./output/z-score热图",
+    output_dir: str = ".",
     suffix: str = "",
     verbose: bool = False,
 ) -> Tuple[Path, Optional[Path]]:
@@ -70,16 +70,19 @@ def run(
     return global_path, china_path
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="提取热图分组映射（可选输出后缀，用于区分中国等子集）")
     parser.add_argument("--input", "-i", required=True, help="准备数据 CSV（如 frequency_prepared.csv）")
     parser.add_argument("--group-col", "-gc", default="Group", help="分组列，默认 Group")
     parser.add_argument("--output-dir", "-o", required=True, help="输出目录（将写入映射 CSV）")
     parser.add_argument("--suffix", "-s", default="", help="可选：输出文件名后缀（例如 _China）")
     parser.add_argument("--verbose", "-v", action="store_true", help="打印详细日志")
+    return parser
 
-    args = parser.parse_args()
 
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
     try:
         run(
             input_csv=args.input,
@@ -88,13 +91,13 @@ def main():
             suffix=args.suffix,
             verbose=args.verbose,
         )
-        sys.exit(0)
+        return 0
     except Exception as e:
         print(f"❌ 错误：{e}", file=sys.stderr)
         import traceback
         traceback.print_exc()
-        sys.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

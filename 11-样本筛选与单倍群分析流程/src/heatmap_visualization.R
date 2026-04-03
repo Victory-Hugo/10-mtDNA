@@ -12,7 +12,6 @@ library(ape)
 library(igraph)
 library(ggplot2)
 library(pheatmap)
-library(reshape2)
 library(ggsci)
 library(gridExtra)
 

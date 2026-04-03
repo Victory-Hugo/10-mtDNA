@@ -179,7 +179,7 @@ def run(
     return csv_out_path, pdf_out_path
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="单倍群频率柱状图生成（全球/中国）")
     parser.add_argument("--input", "-i", required=True, help="输入频率矩阵 CSV（global/china）")
     parser.add_argument("--prepared", "-p", required=True, help="准备数据 CSV（用于提供分组列）")
@@ -190,8 +190,12 @@ def main():
     parser.add_argument("--output-pdf", "-op", required=True, help="柱状图 PDF 输出路径")
     parser.add_argument("--verbose", "-v", action="store_true", help="打印详细日志")
 
-    args = parser.parse_args()
+    return parser
 
+
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
     try:
         run(
             input_csv=args.input,
@@ -202,13 +206,13 @@ def main():
             output_pdf=args.output_pdf,
             verbose=args.verbose,
         )
-        sys.exit(0)
+        return 0
     except Exception as e:
         print(f"❌ 错误：{e}", file=sys.stderr)
         import traceback
         traceback.print_exc()
-        sys.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

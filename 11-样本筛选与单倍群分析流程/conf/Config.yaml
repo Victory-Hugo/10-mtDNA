@@ -1,0 +1,46 @@
+project:
+  base_dir: "/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/11-样本筛选与单倍群分析流程"
+  input_excel: "/mnt/f/OneDrive/文档（共享）/2_mtDNA/线粒体_现代DNA83.xlsx"
+
+paths:
+  python_dir: "python"
+  src_dir: "src"
+  helper_dir: "script"
+  data_dir: "data"
+  tmp_dir: "tmp"
+  log_dir: "log"
+  output_dir: "output"
+  pca_output_dir_global: "output/pca_results_global"
+  pca_output_dir_china: "output/pca_results_china"
+  pca_visualization_dir: "output/PCA"
+  heatmap_output_dir: "output/频率热图"
+  barplot_output_dir: "output/频率柱状图"
+
+tools:
+  conda_bin: "/home/luolintao/miniconda3/bin/conda"
+  python_bin: "/home/luolintao/miniconda3/envs/BigLin/bin/python3"
+  python_env_prefix: "/home/luolintao/miniconda3/envs/BigLin"
+  rscript_bin: "/usr/bin/Rscript"
+
+resources:
+  mapping_excel: "data/基础信息速查表.xlsx"
+  visual_color_csv: "data/color_LYC.csv"
+  pca_viz_color_csv: "data/color语系.csv"
+  phylotree_index_json: "data/phylotree_index.json"
+
+params:
+  new_sample_source: "LLT_20K,LLT_Hani,LLT_GSRD_GS,LLT_GSRD_TB"
+  country_extra_cols: "Continent"
+  ethnicity_extra_cols: "语系,语言"
+  selected_columns: "ID,Population,Province,Country,Haplogroup_YuChunLi,Continent,Language,Sequence_method,Classification,QC_Haplogrep,Language_family"
+  sample_meta_sheet: "现代线粒体DNA汇总"
+  ethnicity_mapping_sheet: "中外各民族名称的罗马字母拼写法"
+  country_mapping_sheet: "海外国家"
+  province_mapping_sheet: "省份中华英文"
+  heatmap_group_col: "Group"
+  min_sample_count: "20"
+  haplogroup_column: "Haplogroup_YuChunLi"
+  pca_n_components: "10"
+  class_big_column: "Group"
+  visual_group_column: "Group"
+  force_run: "true"

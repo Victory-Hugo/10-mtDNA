@@ -15,8 +15,6 @@
 
 import argparse
 import sys
-from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 
@@ -88,7 +86,22 @@ def merge_haplogroup_with_sample(
     return df_merged
 
 
-def main():
+def run(
+    haplogroup: str,
+    sample: str,
+    output: str,
+    verbose: bool = False,
+) -> int:
+    merge_haplogroup_with_sample(
+        haplogroup_csv=haplogroup,
+        sample_csv=sample,
+        output_csv=output,
+        verbose=verbose,
+    )
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
     """命令行入口"""
     parser = argparse.ArgumentParser(
         description="合并单倍群数据与样本信息"
@@ -113,21 +126,19 @@ def main():
         action="store_true",
         help="打印详细日志"
     )
-    
-    args = parser.parse_args()
-    
+    return parser
+
+
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
     try:
-        merge_haplogroup_with_sample(
-            haplogroup_csv=args.haplogroup,
-            sample_csv=args.sample,
-            output_csv=args.output,
-            verbose=args.verbose
-        )
-        sys.exit(0)
+        return run(**vars(args))
     except Exception as e:
         print(f"❌ 错误：{e}", file=sys.stderr)
-        sys.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
