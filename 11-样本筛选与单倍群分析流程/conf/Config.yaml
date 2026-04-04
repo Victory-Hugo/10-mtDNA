@@ -1,6 +1,6 @@
 project:
   base_dir: "/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/11-样本筛选与单倍群分析流程"
-  input_excel: "/mnt/f/OneDrive/文档（共享）/2_mtDNA/线粒体_现代DNA83.xlsx"
+  input_excel: "/mnt/c/Users/Administrator/Desktop/线粒体_现代DNA83.xlsx"
 
 paths:
   python_dir: "python"
@@ -29,7 +29,7 @@ resources:
   phylotree_index_json: "data/phylotree_index.json"
 
 params:
-  new_sample_source: "LLT_20K,LLT_Hani,LLT_GSRD_GS,LLT_GSRD_TB"
+  new_sample_source: "NEW" #? 最终参与后续分析的样本 = Source == (new_sample_source 的样本 + 不以 "LLT" 开头的公共数据)
   country_extra_cols: "Continent"
   ethnicity_extra_cols: "语系,语言"
   selected_columns: "ID,Population,Province,Country,Haplogroup_YuChunLi,Continent,Language,Sequence_method,Classification,QC_Haplogrep,Language_family"
