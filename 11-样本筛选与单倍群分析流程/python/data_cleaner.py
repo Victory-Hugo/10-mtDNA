@@ -17,6 +17,20 @@ import sys
 import pandas as pd
 
 
+def parse_bool_flag(value) -> bool:
+    """将常见字符串/数值形式解析为布尔值。"""
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    text = str(value).strip().lower()
+    if text in {'1', 'true', 'yes', 'y', 'on'}:
+        return True
+    if text in {'0', 'false', 'no', 'n', 'off'}:
+        return False
+    raise ValueError(f"无法解析布尔值参数：{value}")
+
+
 def standardize_column_from_mapping(
     df: pd.DataFrame,
     col: str,
@@ -118,7 +132,13 @@ def clean_sample_info(
     ethnicity_extra_cols: Optional[List[str]] = None,
     selected_columns: Optional[List[str]] = None,
     output_csv: Optional[str] = None,
-    verbose: bool = False
+    verbose: bool = False,
+    class_cols_china: str = 'Population,Province',
+    class_cols_other: str = 'Population,Country',
+    class_split_col: str = 'Country',
+    class_split_country: str = 'China',
+    class_sep: str = '_',
+    han_split_by_region_when_population_only: bool = True,
 ) -> pd.DataFrame:
     """
     按照原笔记本的顺序进行样本筛选和清洗。
@@ -266,13 +286,13 @@ def clean_sample_info(
     df_国家_info = df_国家[country_cols_to_select].rename(
         columns={'国家(英文标准)': 'Country'}
     )
-    df_new = df_new.merge(df_国家_info, how='left', on='Country').drop_duplicates()
-    
+    df_new = df_new.merge(df_国家_info, how='left', on='Country')
+
     # 合并民族信息
     df_民族_info = df_民族[ethnicity_cols_to_select].rename(
         columns={'标准名称(英文)': 'Population'}
     )
-    df_new = df_new.merge(df_民族_info, how='left', on='Population').drop_duplicates()
+    df_new = df_new.merge(df_民族_info, how='left', on='Population')
     df_new = df_new.drop_duplicates(subset=['ID'])
     
     if verbose:
@@ -295,14 +315,59 @@ def clean_sample_info(
     
     if verbose:
         print("[步骤11] 添加分类字段...")
-    
-    def get_classification(row):
-        if row['Country'] == 'China':
-            return f"{row['Population']}_{row['Province']}"
-        else:
-            return f"{row['Population']}_{row['Country']}"
-    
-    df_new['Classification'] = df_new.apply(get_classification, axis=1)
+
+    is_china = df_new[class_split_col] == class_split_country
+    china_cols_list = [c.strip() for c in class_cols_china.split(',') if c.strip()]
+    other_cols_list = [c.strip() for c in class_cols_other.split(',') if c.strip()]
+
+    # 向量化构建分类标签（支持任意数量的列）
+    china_class = df_new[china_cols_list[0]].astype(str)
+    for col in china_cols_list[1:]:
+        china_class = china_class + class_sep + df_new[col].astype(str)
+
+    other_class = df_new[other_cols_list[0]].astype(str)
+    for col in other_cols_list[1:]:
+        other_class = other_class + class_sep + df_new[col].astype(str)
+
+    df_new['Classification'] = other_class.where(~is_china, china_class)
+
+    population_only_mode = (
+        len(china_cols_list) == 1 and china_cols_list[0] == 'Population' and
+        len(other_cols_list) == 1 and other_cols_list[0] == 'Population'
+    )
+    if han_split_by_region_when_population_only and population_only_mode:
+        if verbose:
+            print("  检测到中外 Classification 均仅使用 Population：启用中国 Han 南北拆分...")
+
+        province_direction_col = 'South_North(Qinling-Huaihe)'
+        province_name_col = '省份英文名称(标准)'
+        if (
+            province_name_col in df_省份.columns and
+            province_direction_col in df_省份.columns
+        ):
+            province_direction_map = (
+                df_省份[[province_name_col, province_direction_col]]
+                .dropna(subset=[province_name_col])
+                .drop_duplicates(subset=[province_name_col])
+                .set_index(province_name_col)[province_direction_col]
+                .to_dict()
+            )
+
+            han_china_mask = (
+                (df_new[class_split_col] == class_split_country) &
+                (df_new['Population'] == 'Han')
+            )
+            north_mask = han_china_mask & (
+                df_new['Province'].map(province_direction_map) == 'North'
+            )
+            south_mask = han_china_mask & (
+                df_new['Province'].map(province_direction_map) == 'South'
+            )
+
+            df_new.loc[north_mask, 'Classification'] = 'Han_North'
+            df_new.loc[south_mask, 'Classification'] = 'Han_South'
+        elif verbose:
+            print(f"  警告：省份映射表缺少列 {province_name_col} 或 {province_direction_col}，跳过 Han 南北拆分。")
     
     if verbose:
         print("[步骤12] 输出结果...")
@@ -327,6 +392,12 @@ def run(
     ethnicity_cols: Optional[List[str]] = None,
     output: Optional[str] = None,
     verbose: bool = False,
+    class_cols_china: str = 'Population,Province',
+    class_cols_other: str = 'Population,Country',
+    class_split_col: str = 'Country',
+    class_split_country: str = 'China',
+    class_sep: str = '_',
+    han_split_by_region_when_population_only: bool = True,
 ) -> int:
     clean_sample_info(
         input_excel=input,
@@ -340,6 +411,12 @@ def run(
         ethnicity_extra_cols=ethnicity_cols,
         output_csv=output,
         verbose=verbose,
+        class_cols_china=class_cols_china,
+        class_cols_other=class_cols_other,
+        class_split_col=class_split_col,
+        class_split_country=class_split_country,
+        class_sep=class_sep,
+        han_split_by_region_when_population_only=han_split_by_region_when_population_only,
     )
     return 0
 
@@ -405,12 +482,45 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="打印详细日志"
     )
+    parser.add_argument(
+        "--class-cols-china",
+        default="Population,Province",
+        help="国内样本 Classification 拼接列（逗号分隔，单列填单个列名，默认 Population,Province）"
+    )
+    parser.add_argument(
+        "--class-cols-other",
+        default="Population,Country",
+        help="境外样本 Classification 拼接列（逗号分隔，单列填单个列名，默认 Population,Country）"
+    )
+    parser.add_argument(
+        "--class-split-col",
+        default="Country",
+        help="用于判断国内/境外分支的列名（默认 Country）"
+    )
+    parser.add_argument(
+        "--class-split-country",
+        default="China",
+        help="触发国内分支的列值（默认 China）"
+    )
+    parser.add_argument(
+        "--class-sep",
+        default="_",
+        help="多列拼接时的分隔符（默认 _）"
+    )
+    parser.add_argument(
+        "--han-split-by-region-when-population-only",
+        default="true",
+        help="仅当中外 Classification 都只用 Population 时，是否将中国 Han 按南北拆分为 Han_North/Han_South（默认 true）"
+    )
     return parser
 
 
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
+    args.han_split_by_region_when_population_only = parse_bool_flag(
+        args.han_split_by_region_when_population_only
+    )
 
     try:
         return run(**vars(args))

@@ -1,16 +1,16 @@
 {
   "project_name": "mt_diversity",
-  "input_vcf": "/mnt/l/22-WHALE/5-群体遗传学/data/merged_clean.vcf.gz",
-  "sample_table": "/mnt/l/22-WHALE/5-群体遗传学/meta/按Population分组/Population_Count20.list.tsv",
+  "input_vcf": "/mnt/l/26-2026年4月3日临时项目/5-77SNP/data/本次研究_77.vcf.gz",
+  "sample_table": "/mnt/l/26-2026年4月3日临时项目/5-77SNP/meta/Final_Sample.tsv",
   "sample_id_column": "ID",
   "group_column": "Group",
   "min_group_size": 20,
   "contig_name": "chrM",
   "sequence_length": 16569,
-  "output_dir": "/mnt/l/22-WHALE/5-群体遗传学/output/按Population分组/",
-  "tmp_dir": "/mnt/l/22-WHALE/5-群体遗传学/data/tmp/按Population分组/",
-  "meta_dir": "/mnt/l/22-WHALE/5-群体遗传学/meta/按Population分组/",
-  "log_dir": "/mnt/l/22-WHALE/5-群体遗传学/logs/按Population分组/",
+  "output_dir": "/mnt/l/26-2026年4月3日临时项目/5-77SNP/output/本次研究/",
+  "tmp_dir": "/mnt/l/26-2026年4月3日临时项目/5-77SNP/data/tmp/本次研究/",
+  "meta_dir": "/mnt/l/26-2026年4月3日临时项目/5-77SNP/meta/本次研究/",
+  "log_dir": "/mnt/l/26-2026年4月3日临时项目/5-77SNP/logs/本次研究/",
   "metrics": {
     "within_groups": [
       "pi",

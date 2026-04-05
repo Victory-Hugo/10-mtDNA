@@ -16,6 +16,30 @@ from typing import Optional, List
 import pandas as pd
 
 
+def _build_frequency_matrix(df: pd.DataFrame, group_col: str, hap_col: str, min_count: int = 0) -> pd.DataFrame:
+    """从数据构建单倍群频率透视表。
+
+    参数：
+        df: 输入 DataFrame（已含分组列和单倍群列）
+        group_col: 分组列名（如 'Classification'）
+        hap_col: 单倍群列名
+        min_count: 若 > 0，过滤样本数低于阈值的分组
+    返回：
+        透视表 DataFrame（行=分组，列=单倍群，值=频率）
+    """
+    if min_count > 0:
+        counts = df.groupby(group_col)[group_col].transform('count')
+        df = df[counts >= min_count]
+    df_freq = df.groupby([group_col, hap_col]).size().reset_index(name='Count')
+    df_freq['Frequency'] = df_freq.groupby(group_col)['Count'].transform(lambda x: x / x.sum())
+    df_pivot = df_freq.pivot(
+        index=group_col,
+        columns=hap_col,
+        values='Frequency'
+    ).fillna(0).reset_index()
+    return df_pivot
+
+
 def preprocess_for_frequency(
     input_csv: str,
     province_mapping_excel: str,
@@ -186,37 +210,17 @@ def preprocess_for_frequency(
     
     if verbose:
         print("[步骤11] 计算单倍群频率（全球）...")
-    
-    # 计算全球频率
-    df_freq_global = df_global.groupby(['Classification', haplogroup_column]).size().reset_index(name='Count')
-    df_freq_global['Frequency'] = df_freq_global.groupby('Classification')['Count'].transform(lambda x: x / x.sum())
-    
-    # 转换为透视表（全球）
-    df_pivot_global = df_freq_global.pivot(
-        index='Classification',
-        columns=haplogroup_column,
-        values='Frequency'
-    ).fillna(0)
-    df_pivot_global = df_pivot_global.reset_index()
-    
+
+    df_pivot_global = _build_frequency_matrix(df_global, 'Classification', haplogroup_column)
+
     if verbose:
         print(f"  全球频率表行数：{len(df_pivot_global)}")
         print(f"  全球单倍群数：{len(df_pivot_global.columns) - 1}")
-    
+
     if verbose:
         print("[步骤12] 计算单倍群频率（中国）...")
-    
-    # 计算中国频率
-    df_freq_china = df_china.groupby(['Classification', haplogroup_column]).size().reset_index(name='Count')
-    df_freq_china['Frequency'] = df_freq_china.groupby('Classification')['Count'].transform(lambda x: x / x.sum())
-    
-    # 转换为透视表（中国）
-    df_pivot_china = df_freq_china.pivot(
-        index='Classification',
-        columns=haplogroup_column,
-        values='Frequency'
-    ).fillna(0)
-    df_pivot_china = df_pivot_china.reset_index()
+
+    df_pivot_china = _build_frequency_matrix(df_china, 'Classification', haplogroup_column)
     
     if verbose:
         print(f"  中国频率表行数：{len(df_pivot_china)}")

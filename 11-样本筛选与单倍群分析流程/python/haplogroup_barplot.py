@@ -141,11 +141,7 @@ def run(
         df_meta[[merge_key, group_col]].drop_duplicates(subset=[merge_key]),
         on=merge_key,
         how='left'
-    )
-
-    if verbose:
-        print("[步骤3] 去重…")
-    df = df.drop_duplicates(subset=[merge_key])
+    ).drop_duplicates(subset=[merge_key])
 
     if verbose:
         print("[步骤4] 删除全为 0 的数值列…")

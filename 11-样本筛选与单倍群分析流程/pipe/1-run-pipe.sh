@@ -65,11 +65,15 @@ DATA_DIR="$(normalize_path "$PATHS_DATA_DIR")"
 TMP_DIR="$(normalize_path "$PATHS_TMP_DIR")"
 LOG_DIR="$(normalize_path "$PATHS_LOG_DIR")"
 OUTPUT_DIR="$(normalize_path "$PATHS_OUTPUT_DIR")"
+STEP1_DATA_DIR="$(normalize_path "$PATHS_OUTPUT_STEP1_DATA")"
+STEP2_DATA_DIR="$(normalize_path "$PATHS_OUTPUT_STEP2_DATA")"
+STEP3_DATA_DIR="$(normalize_path "$PATHS_OUTPUT_STEP3_DATA")"
+STEP4_DATA_DIR="$(normalize_path "$PATHS_OUTPUT_STEP4_DATA")"
+STEP4_IMG_DIR="$(normalize_path "$PATHS_OUTPUT_STEP4_IMG")"
 PCA_OUTPUT_DIR_GLOBAL="$(normalize_path "$PATHS_PCA_OUTPUT_DIR_GLOBAL")"
 PCA_OUTPUT_DIR_CHINA="$(normalize_path "$PATHS_PCA_OUTPUT_DIR_CHINA")"
 PCA_VIS_OUTPUT_DIR="$(normalize_path "$PATHS_PCA_VISUALIZATION_DIR")"
 HEATMAP_OUTPUT_DIR="$(normalize_path "$PATHS_HEATMAP_OUTPUT_DIR")"
-BARPLOT_OUTPUT_DIR="$(normalize_path "$PATHS_BARPLOT_OUTPUT_DIR")"
 
 VISUAL_COLOR_CSV="$(normalize_path "$RESOURCES_VISUAL_COLOR_CSV")"
 PCA_VIZ_COLOR_CSV="$(normalize_path "$RESOURCES_PCA_VIZ_COLOR_CSV")"
@@ -88,6 +92,12 @@ HAPLOGROUP_COLUMN="${PARAMS_HAPLOGROUP_COLUMN}"
 PCA_N_COMPONENTS="${PARAMS_PCA_N_COMPONENTS}"
 CLASS_BIG_COLUMN="${PARAMS_CLASS_BIG_COLUMN}"
 VISUAL_GROUP_COLUMN="${PARAMS_VISUAL_GROUP_COLUMN}"
+CLASS_COLS_CHINA="${PARAMS_CLASSIFICATION_COLS_CHINA}"
+CLASS_COLS_OTHER="${PARAMS_CLASSIFICATION_COLS_OTHER}"
+CLASS_SPLIT_COL="${PARAMS_CLASSIFICATION_SPLIT_COL}"
+CLASS_SPLIT_COUNTRY="${PARAMS_CLASSIFICATION_SPLIT_COUNTRY}"
+CLASS_SEPARATOR="${PARAMS_CLASSIFICATION_SEPARATOR}"
+HAN_SPLIT_BY_REGION_WHEN_POPULATION_ONLY="${PARAMS_HAN_SPLIT_BY_REGION_WHEN_POPULATION_ONLY}"
 
 split_csv_to_array "${PARAMS_NEW_SAMPLE_SOURCE}" NEW_SAMPLE_SOURCE
 split_csv_to_array "${PARAMS_COUNTRY_EXTRA_COLS}" COUNTRY_EXTRA_COLS
@@ -95,7 +105,11 @@ split_csv_to_array "${PARAMS_ETHNICITY_EXTRA_COLS}" ETHNICITY_EXTRA_COLS
 split_csv_to_array "${PARAMS_SELECTED_COLUMNS}" SELECTED_COLUMNS
 
 # 创建必要目录
-mkdir -p "$LOG_DIR" "$OUTPUT_DIR" "$DATA_DIR" "$TMP_DIR" "$PCA_OUTPUT_DIR_GLOBAL" "$PCA_OUTPUT_DIR_CHINA" "$PCA_VIS_OUTPUT_DIR" "$HEATMAP_OUTPUT_DIR" "$BARPLOT_OUTPUT_DIR"
+mkdir -p "$LOG_DIR" "$OUTPUT_DIR" "$DATA_DIR" "$TMP_DIR" \
+    "$STEP1_DATA_DIR" "$STEP2_DATA_DIR" "$STEP3_DATA_DIR" \
+    "$STEP4_DATA_DIR" "$STEP4_IMG_DIR" \
+    "$PCA_OUTPUT_DIR_GLOBAL" "$PCA_OUTPUT_DIR_CHINA" "$PCA_VIS_OUTPUT_DIR" \
+    "$HEATMAP_OUTPUT_DIR"
 
 # 主日志文件
 MAIN_LOG="${LOG_DIR}/run-pipe.sh.log"
@@ -244,7 +258,7 @@ run_step_1() {
     if ! $PYTHON3 "$PYTHON_SCRIPT" \
         --input "$INPUT_EXCEL" \
         --temp-dir "$TMP_DIR" \
-        --data-dir "$OUTPUT_DIR" \
+        --data-dir "$STEP1_DATA_DIR" \
         --tree-index "$PHYLOTREE_INDEX_JSON"; then
         log_error "❌ 步骤 $step_num 执行失败"
         return 1
@@ -266,7 +280,7 @@ run_step_2() {
     log_info "▶ 开始步骤 $step_num：$step_name"
     
     local PYTHON_SCRIPT="${PYTHON_DIR}/data_cleaner.py"
-    local OUTPUT_CSV="${OUTPUT_DIR}/本次研究样本基本信息.csv"
+    local OUTPUT_CSV="${STEP2_DATA_DIR}/本次研究样本基本信息.csv"
     # 检查基础信息速查表
     if [ ! -f "$MAPPING_EXCEL" ]; then
         log_error "缺失基础信息速查表：$MAPPING_EXCEL"
@@ -289,6 +303,12 @@ run_step_2() {
             --province-mapping-sheet "$PROVINCE_MAPPING_SHEET" \
             --country-cols "${COUNTRY_EXTRA_COLS[@]}" \
             --ethnicity-cols "${ETHNICITY_EXTRA_COLS[@]}" \
+            --class-cols-china "$CLASS_COLS_CHINA" \
+            --class-cols-other "$CLASS_COLS_OTHER" \
+            --class-split-col "$CLASS_SPLIT_COL" \
+            --class-split-country "$CLASS_SPLIT_COUNTRY" \
+            --class-sep "$CLASS_SEPARATOR" \
+            --han-split-by-region-when-population-only "$HAN_SPLIT_BY_REGION_WHEN_POPULATION_ONLY" \
             --output "$TMP_OUT"; then
             log_error "❌ 步骤 $step_num 执行失败（source=$src）"
             return 1
@@ -300,7 +320,7 @@ run_step_2() {
             tail -n +2 "$TMP_OUT" >> "$TMP_MERGE"
         fi
     done
-    mkdir -p "$OUTPUT_DIR"
+    mkdir -p "$STEP2_DATA_DIR"
     if ! mv "$TMP_MERGE" "$OUTPUT_CSV"; then
         log_error "❌ 步骤 $step_num 执行失败：无法写入输出文件 $OUTPUT_CSV"
         return 1
@@ -321,16 +341,15 @@ run_step_3() {
     log_info "▶ 开始步骤 $step_num：$step_name"
     
     local PYTHON_SCRIPT="${PYTHON_DIR}/merger.py"
-    local HAPLOGROUP_CSV="${OUTPUT_DIR}/全部单倍群整理.csv"
-    local SAMPLE_CSV="${OUTPUT_DIR}/本次研究样本基本信息.csv"
-    local OUTPUT_CSV="${OUTPUT_DIR}/本次研究样本基本信息_含单倍群.csv"
+    local HAPLOGROUP_CSV="${STEP1_DATA_DIR}/全部单倍群整理.csv"
+    local SAMPLE_CSV="${STEP2_DATA_DIR}/本次研究样本基本信息.csv"
+    local OUTPUT_CSV="${STEP3_DATA_DIR}/本次研究样本基本信息_含单倍群.csv"
     
-    # 检查输入文件
     if [ ! -f "$HAPLOGROUP_CSV" ]; then
         log_error "缺失单倍群文件（需先完成第1步）：$HAPLOGROUP_CSV"
         return 1
     fi
-    
+
     if [ ! -f "$SAMPLE_CSV" ]; then
         log_error "缺失样本信息文件（需先完成第2步）：$SAMPLE_CSV"
         return 1
@@ -360,11 +379,11 @@ run_step_4() {
     log_info "▶ 开始步骤 $step_num：$step_name"
     
     local PYTHON_SCRIPT="${PYTHON_DIR}/frequency_preprocessor.py"
-    local INPUT_CSV="${OUTPUT_DIR}/本次研究样本基本信息_含单倍群.csv"
-    local OUTPUT_PREPARED="${OUTPUT_DIR}/频率分析准备.csv"
-    local OUTPUT_PREPARED_CHINA="${OUTPUT_DIR}/频率分析准备_中国.csv"
-    local OUTPUT_FREQUENCY="${OUTPUT_DIR}/频率矩阵.csv"
-    local OUTPUT_FREQUENCY_CHINA="${OUTPUT_DIR}/频率矩阵_中国.csv"
+    local INPUT_CSV="${STEP3_DATA_DIR}/本次研究样本基本信息_含单倍群.csv"
+    local OUTPUT_PREPARED="${STEP4_DATA_DIR}/频率分析准备.csv"
+    local OUTPUT_PREPARED_CHINA="${STEP4_DATA_DIR}/频率分析准备_中国.csv"
+    local OUTPUT_FREQUENCY="${STEP4_DATA_DIR}/频率矩阵.csv"
+    local OUTPUT_FREQUENCY_CHINA="${STEP4_DATA_DIR}/频率矩阵_中国.csv"
     
     # 检查输入文件
     if [ ! -f "$INPUT_CSV" ]; then
@@ -400,13 +419,11 @@ run_step_4() {
         return 1
     fi
 
-    mkdir -p "$HEATMAP_OUTPUT_DIR"
-
         # 提取全球映射
         if ! $PYTHON3 "$HM_SCRIPT" \
             --input "$HM_INPUT_PREPARED" \
             --group-col "$HEATMAP_GROUP_COL" \
-            --output-dir "$HEATMAP_OUTPUT_DIR"; then
+            --output-dir "$STEP4_DATA_DIR"; then
         log_error "❌ 步骤 $step_num 补充任务失败（热图分组提取）"
         return 1
     fi
@@ -418,7 +435,7 @@ run_step_4() {
             --input "$HM_INPUT_PREPARED_CHINA" \
             --group-col "$HEATMAP_GROUP_COL" \
             --suffix "_China" \
-            --output-dir "$HEATMAP_OUTPUT_DIR"; then
+            --output-dir "$STEP4_DATA_DIR"; then
             log_error "❌ 步骤 $step_num 补充任务失败（热图分组提取，中国）"
             return 1
         fi
@@ -442,8 +459,8 @@ run_step_5() {
     
     log_info "▶ 开始步骤 $step_num：$step_name"
     
-    local FREQUENCY_CSV="${OUTPUT_DIR}/频率矩阵.csv"
-    
+    local FREQUENCY_CSV="${STEP4_DATA_DIR}/频率矩阵.csv"
+
     # 检查输入文件
     if [ ! -f "$FREQUENCY_CSV" ]; then
         log_error "缺失频率表（需先完成第4步）：$FREQUENCY_CSV"
@@ -492,7 +509,7 @@ run_step_6() {
     
     local PYTHON_SCRIPT="${PYTHON_DIR}/pca_postprocessor.py"
     local PCA_RESULT_FILE="${PCA_OUTPUT_DIR_GLOBAL}/pca_results_${PCA_N_COMPONENTS}.csv"
-    local PREPARED_CSV="${OUTPUT_DIR}/频率分析准备.csv"
+    local PREPARED_CSV="${STEP4_DATA_DIR}/频率分析准备.csv"
     local PCA_VIS_CSV="${PCA_OUTPUT_DIR_GLOBAL}/PCA输入文件.csv"
     
     # 检查输入文件
@@ -532,8 +549,8 @@ run_step_7() {
     
     log_info "▶ 开始步骤 $step_num：$step_name"
     
-    local CHINA_FREQUENCY="${OUTPUT_DIR}/频率矩阵_中国.csv"
-    
+    local CHINA_FREQUENCY="${STEP4_DATA_DIR}/频率矩阵_中国.csv"
+
     # 检查输入文件
     if [ ! -f "$CHINA_FREQUENCY" ]; then
         log_error "缺失中国频率表（需先完成第4步）：$CHINA_FREQUENCY"
@@ -582,7 +599,7 @@ run_step_8() {
     
     local PYTHON_SCRIPT="${PYTHON_DIR}/pca_postprocessor.py"
     local CHINA_PCA_RESULT_FILE="${PCA_OUTPUT_DIR_CHINA}/pca_results_${PCA_N_COMPONENTS}.csv"
-    local CHINA_PREPARED="${OUTPUT_DIR}/频率分析准备_中国.csv"
+    local CHINA_PREPARED="${STEP4_DATA_DIR}/频率分析准备_中国.csv"
     local CHINA_PCA_VIS="${PCA_OUTPUT_DIR_CHINA}/PCA输入文件.csv"
     
     # 检查输入文件
@@ -625,22 +642,20 @@ run_step_9() {
     local PYTHON_SCRIPT="${PYTHON_DIR}/haplogroup_barplot.py"
 
     # 全局输入/输出
-    local INPUT_CSV_GLOBAL="${OUTPUT_DIR}/频率矩阵.csv"
-    local PREPARED_CSV_GLOBAL="${OUTPUT_DIR}/频率分析准备.csv"
-    local OUTPUT_PDF_GLOBAL="${BARPLOT_OUTPUT_DIR}/Haplogroup_distribution.pdf"
+    local INPUT_CSV_GLOBAL="${STEP4_DATA_DIR}/频率矩阵.csv"
+    local PREPARED_CSV_GLOBAL="${STEP4_DATA_DIR}/频率分析准备.csv"
+    local OUTPUT_PDF_GLOBAL="${STEP4_IMG_DIR}/Haplogroup_distribution.pdf"
 
     # 中国输入/输出
-    local INPUT_CSV_CHINA="${OUTPUT_DIR}/频率矩阵_中国.csv"
-    local PREPARED_CSV_CHINA="${OUTPUT_DIR}/频率分析准备_中国.csv"
-    local OUTPUT_PDF_CHINA="${BARPLOT_OUTPUT_DIR}/Haplogroup_distribution_中国.pdf"
+    local INPUT_CSV_CHINA="${STEP4_DATA_DIR}/频率矩阵_中国.csv"
+    local PREPARED_CSV_CHINA="${STEP4_DATA_DIR}/频率分析准备_中国.csv"
+    local OUTPUT_PDF_CHINA="${STEP4_IMG_DIR}/Haplogroup_distribution_中国.pdf"
 
     # 检查颜色映射文件
     if [ ! -f "$VISUAL_COLOR_CSV" ]; then
         log_error "缺失颜色映射文件：$VISUAL_COLOR_CSV"
         return 1
     fi
-
-    mkdir -p "$BARPLOT_OUTPUT_DIR"
 
     # 先全球
     if [ ! -f "$INPUT_CSV_GLOBAL" ]; then
@@ -769,8 +784,6 @@ run_step_11() {
     log_info "▶ 开始步骤 $step_num：$step_name"
 
     local R_SCRIPT="${SRC_DIR}/heatmap_visualization.R"
-    local HEATMAP_OUTPUT_DIR="${PATHS_HEATMAP_OUTPUT_DIR}"
-    HEATMAP_OUTPUT_DIR="$(normalize_path "$HEATMAP_OUTPUT_DIR")"
 
     if ! command -v "$RSCRIPT" &> /dev/null; then
         log_error "缺失Rscript命令，请确认R环境已安装"
@@ -784,14 +797,14 @@ run_step_11() {
 
     mkdir -p "$HEATMAP_OUTPUT_DIR"
 
-    local FREQ_MATRIX_GLOBAL="${OUTPUT_DIR}/频率矩阵.csv"
-    local GROUP_MAPPING_GLOBAL="${HEATMAP_OUTPUT_DIR}/Classification_Group_mapping.csv"
-    
+    local FREQ_MATRIX_GLOBAL="${STEP4_DATA_DIR}/频率矩阵.csv"
+    local GROUP_MAPPING_GLOBAL="${STEP4_DATA_DIR}/Classification_Group_mapping.csv"
+
     if [ ! -f "$FREQ_MATRIX_GLOBAL" ]; then
         log_error "缺失全球频率矩阵（需先完成第4步）：$FREQ_MATRIX_GLOBAL"
         return 1
     fi
-    
+
     if [ ! -f "$GROUP_MAPPING_GLOBAL" ]; then
         log_error "缺失全球分组映射（需先完成第4步）：$GROUP_MAPPING_GLOBAL"
         return 1
@@ -807,14 +820,14 @@ run_step_11() {
         return 1
     fi
 
-    local FREQ_MATRIX_CHINA="${OUTPUT_DIR}/频率矩阵_中国.csv"
-    local GROUP_MAPPING_CHINA="${HEATMAP_OUTPUT_DIR}/Classification_Group_mapping_China.csv"
-    
+    local FREQ_MATRIX_CHINA="${STEP4_DATA_DIR}/频率矩阵_中国.csv"
+    local GROUP_MAPPING_CHINA="${STEP4_DATA_DIR}/Classification_Group_mapping_China.csv"
+
     if [ ! -f "$FREQ_MATRIX_CHINA" ]; then
         log_error "缺失中国频率矩阵（需先完成第4步）：$FREQ_MATRIX_CHINA"
         return 1
     fi
-    
+
     if [ ! -f "$GROUP_MAPPING_CHINA" ]; then
         log_error "缺失中国分组映射（需先完成第4步）：$GROUP_MAPPING_CHINA"
         return 1
@@ -836,7 +849,7 @@ run_step_11() {
 main() {
     # 检查所有输入文件
     check_required_files
-    
+
     # 执行步骤
     run_step_1 || exit 1
     run_step_2 || exit 1
@@ -849,7 +862,7 @@ main() {
     run_step_9 || exit 1   # 频率柱状图（全球+中国）
     run_step_10 || exit 1  # PCA可视化（全球+中国）
     run_step_11 || exit 1  # 频率热图可视化（全球+中国）
-    
+
     log_success "========== 流程执行完成 =========="
 }
 

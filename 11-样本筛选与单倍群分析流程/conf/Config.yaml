@@ -1,46 +1,106 @@
+# =====================================================================
+# 样本筛选与单倍群分析流程 — 配置文件
+# 所有路径均支持：绝对路径 / 相对路径（相对于 base_dir）
+# =====================================================================
+
 project:
-  base_dir: "/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/11-样本筛选与单倍群分析流程"
-  input_excel: "/mnt/c/Users/Administrator/Desktop/线粒体_现代DNA83.xlsx"
+  base_dir: "/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/11-样本筛选与单倍群分析流程"  # 项目根目录（绝对路径）
+  input_excel: "/mnt/l/26-2026年4月3日临时项目/4-PCA/meta/线粒体_现代DNA83.xlsx"             # 原始数据 Excel 文件（绝对路径）
 
+# --------------------------------------------------------------------- #
+# 目录结构：所有路径相对于 base_dir，也可改为绝对路径                  #
+# --------------------------------------------------------------------- #
 paths:
-  python_dir: "python"
-  src_dir: "src"
-  helper_dir: "script"
-  data_dir: "data"
-  tmp_dir: "tmp"
-  log_dir: "log"
-  output_dir: "output"
-  pca_output_dir_global: "output/pca_results_global"
-  pca_output_dir_china: "output/pca_results_china"
-  pca_visualization_dir: "output/PCA"
-  heatmap_output_dir: "output/频率热图"
-  barplot_output_dir: "output/频率柱状图"
+  python_dir: "python"   # Python 脚本目录
+  src_dir:    "src"      # R 脚本目录
+  helper_dir: "script"   # 辅助脚本目录（含 load_config.sh、console_ui.sh）
+  data_dir:   "data"     # 原始数据与资源文件目录
+  tmp_dir:    "tmp"      # 临时文件目录（可安全清空）
+  log_dir:    "log"      # 运行日志目录
+  output_dir: "output"   # 输出根目录
 
+  # 各步骤输出子目录
+  output_step1_data:     "output/1-单倍群整理/data"      # 第 1 步：单倍群整理输出
+  output_step2_data:     "output/2-样本筛选/data"        # 第 2 步：样本筛选输出
+  output_step3_data:     "output/3-合并单倍群/data"      # 第 3 步：合并单倍群输出
+  output_step4_data:     "output/4-频率分析/data"        # 第 4 步：频率矩阵、准备数据
+  output_step4_img:      "output/4-频率分析/img"         # 第 4 步（步骤9）：柱状图
+  pca_output_dir_global: "output/5-PCA分析/data/global"  # 第 5–6 步：全球 PCA 中间文件
+  pca_output_dir_china:  "output/5-PCA分析/data/china"   # 第 7–8 步：中国 PCA 中间文件
+  pca_visualization_dir: "output/5-PCA分析/img"          # 第 10 步：PCA 可视化图
+  heatmap_output_dir:    "output/6-热图/img"             # 第 11 步：频率热图
+
+# --------------------------------------------------------------------- #
+# 工具路径：集中管理所有可执行文件，避免硬编码                        #
+# --------------------------------------------------------------------- #
 tools:
-  conda_bin: "/home/luolintao/miniconda3/bin/conda"
-  python_bin: "/home/luolintao/miniconda3/envs/BigLin/bin/python3"
-  python_env_prefix: "/home/luolintao/miniconda3/envs/BigLin"
-  rscript_bin: "/usr/bin/Rscript"
+  conda_bin:          "/home/luolintao/miniconda3/bin/conda"                  # conda 可执行文件路径
+  python_bin:         "/home/luolintao/miniconda3/envs/BigLin/bin/python3"    # Python 解释器（conda 环境内）
+  python_env_prefix:  "/home/luolintao/miniconda3/envs/BigLin"                # conda 环境目录（用于激活）
+  rscript_bin:        "/usr/bin/Rscript"                                       # Rscript 可执行文件路径
 
+# --------------------------------------------------------------------- #
+# 资源文件：分析所需的外部数据文件                                    #
+# --------------------------------------------------------------------- #
 resources:
-  mapping_excel: "data/基础信息速查表.xlsx"
-  visual_color_csv: "data/color_LYC.csv"
-  pca_viz_color_csv: "data/color语系.csv"
-  phylotree_index_json: "data/phylotree_index.json"
+  mapping_excel:        "data/基础信息速查表.xlsx"     # 民族/国家/省份三合一映射表
+  visual_color_csv:     "data/color_LYC.csv"           # 单倍群颜色映射（用于柱状图）
+  pca_viz_color_csv:    "data/color语系.csv"           # 语系颜色映射（用于 PCA 可视化）
+  phylotree_index_json: "data/phylotree_index.json"    # 单倍群系统发育树索引
 
+# --------------------------------------------------------------------- #
+# 分析参数：控制每个步骤的行为                                        #
+# --------------------------------------------------------------------- #
 params:
-  new_sample_source: "NEW" #? 最终参与后续分析的样本 = Source == (new_sample_source 的样本 + 不以 "LLT" 开头的公共数据)
-  country_extra_cols: "Continent"
-  ethnicity_extra_cols: "语系,语言"
+  # ---- 样本来源 ----
+  new_sample_source: "NEW"   # 新样本标识（Source 列的值）；多个来源用逗号分隔，如 "NEW,NEW2"
+
+  # ---- 映射表列名 ----
+  country_extra_cols:   "Continent"    # 从国家映射表额外引入的列（除固定的 Country 列外）
+  ethnicity_extra_cols: "语系,语言"    # 从民族映射表额外引入的列（除固定的 Population 列外）
   selected_columns: "ID,Population,Province,Country,Haplogroup_YuChunLi,Continent,Language,Sequence_method,Classification,QC_Haplogrep,Language_family"
-  sample_meta_sheet: "现代线粒体DNA汇总"
-  ethnicity_mapping_sheet: "中外各民族名称的罗马字母拼写法"
-  country_mapping_sheet: "海外国家"
-  province_mapping_sheet: "省份中华英文"
-  heatmap_group_col: "Group"
-  min_sample_count: "20"
-  haplogroup_column: "Haplogroup_YuChunLi"
-  pca_n_components: "10"
-  class_big_column: "Group"
-  visual_group_column: "Group"
-  force_run: "true"
+                                       # 最终保留的列名，逗号分隔
+
+  # ---- Excel Sheet 名称 ----
+  sample_meta_sheet:        "现代线粒体DNA汇总"          # 主数据 Sheet 名
+  ethnicity_mapping_sheet:  "中外各民族名称的罗马字母拼写法"  # 民族映射 Sheet 名
+  country_mapping_sheet:    "海外国家"                   # 国家映射 Sheet 名
+  province_mapping_sheet:   "省份中华英文"               # 省份映射 Sheet 名
+
+  # ---- 频率分析 ----
+  min_sample_count:  "20"                  # Classification 最少样本数阈值（低于此值的分组将被剔除）
+  haplogroup_column: "Haplogroup_YuChunLi" # 单倍群列名（数据中实际的列名）
+
+  # ---- PCA 分析 ----
+  pca_n_components: "10"   # PCA 保留的主成分数
+
+  # ---- 分组与可视化 ----
+  heatmap_group_col:   "Group"   # 热图中的分组列名
+  class_big_column:    "Group"   # 大分类列（用于 PCA/热图分组展示）
+  visual_group_column: "Group"   # 柱状图中的分组列名
+
+  # ---- 流程控制 ----
+  force_run: "true"   # "true" = 每次强制重跑全部步骤；"false" = 跳过已完成的步骤（提速）
+
+  # ---- Classification 生成规则 ----
+  # 说明：Classification 是每条样本的"分类标签"，由一列或多列拼接而成
+  #       国内（China）和境外（Other）可分别配置不同的拼接列
+  #
+  # 示例一（默认，两列拼接）：
+  #   classification_cols_china: "Population,Province"  → Han_Shandong
+  #   classification_cols_other: "Population,Country"   → Han_Japan
+  #
+  # 示例二（只用一列）：
+  #   classification_cols_china: "Population"           → Han
+  #   classification_cols_other: "Population"           → Han
+  #
+  # 示例三（只用省份/国家，不含 Population）：
+  #   classification_cols_china: "Province"             → Shandong
+  #   classification_cols_other: "Country"              → Japan
+
+  classification_cols_china:   "Population"   # 国内样本分类拼接列（逗号分隔，填1列则不拼接）
+  classification_cols_other:   "Population"    # 境外样本分类拼接列（同上）
+  classification_split_col:    "Country"               # 用于判断国内/境外的列名（通常为 Country）
+  classification_split_country: "China"                # 触发国内分支的列值（通常为 China）
+  classification_separator:    "_"                     # 多列拼接时的分隔符（默认下划线）
+  han_split_by_region_when_population_only: "true"    # 仅当中外 Classification 都只用 Population 时，是否将中国 Han 按南北拆分为 Han_North/Han_South
