@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-解析 PhyloTree Build 17 HTM 文件，输出含层级关系和定义突变的 CSV。
+解析 PhyloTree Build 17 HTM 文件，输出含层级关系和定义突变的 TSV。
 
 列含义：
-  haplogroup  - 单倍群名称
-  depth       - 在树中的列号（代表层级深度）
-  parent      - 父节点单倍群名
-  mutations   - 定义该单倍群的突变列表（空格分隔）
+  Haplogroup  - 单倍群名称
+  Level       - 在树中的列号（代表层级深度）
+  Parent      - 父节点单倍群名
+  Mutations   - 定义该单倍群的突变列表（空格分隔）
 
 使用：
-  python3 parse_phylotree.py "mtDNA tree Build 17.htm" > output.csv
+  python3 parse_phylotree.py "mtDNA tree Build 17.htm" > output.tsv
 """
 
 import re
@@ -32,10 +32,6 @@ HAPLO_CLASSES = {
 # 登录号列的类，需排除
 ACCESSION_CLASS = 'xl13117826'
 
-# 突变格的类前缀（xl93xxxx、xl97xxxx 等）
-MUTATION_CLASS_PREFIXES = ('xl93', 'xl97')
-
-
 def clean_mutation_text(text: str) -> str:
     """清理突变文本：去除 BOM、不换行空格、多余空白。"""
     text = text.replace('\ufeff', '').replace('\xa0', '').replace('\u00a0', '')
@@ -54,12 +50,12 @@ def extract_mutations_from_row(cells_after_haplo) -> str:
         if ACCESSION_CLASS in cls_str:
             break
 
-        # 只处理突变格（有内容的）
-        if any(cls_str.startswith(p) or p in cls_str for p in MUTATION_CLASS_PREFIXES):
-            text = td.get_text(' ')
-            text = clean_mutation_text(text)
-            if text:
-                parts.append(text)
+        # Build 17 中 mutation 单元格样式并不稳定；只要在 accession 列之前且有内容，
+        # 就视为当前单倍群的定义突变。
+        text = td.get_text(' ')
+        text = clean_mutation_text(text)
+        if text:
+            parts.append(text)
 
     return ' '.join(parts)
 
@@ -145,10 +141,10 @@ def parse_phylotree(filepath: str):
         mutations = extract_mutations_from_row(cells_after)
 
         haplogroups.append({
-            'haplogroup': haplo_name,
-            'depth': depth,
-            'parent': parent if parent else '',
-            'mutations': mutations,
+            'Haplogroup': haplo_name,
+            'Level': depth,
+            'Parent': parent if parent else '',
+            'Mutations': mutations,
         })
 
     return haplogroups
@@ -156,7 +152,7 @@ def parse_phylotree(filepath: str):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("用法：python3 parse_phylotree.py <HTM文件路径> [输出CSV路径]", file=sys.stderr)
+        print("用法：python3 parse_phylotree.py <HTM文件路径> [输出TSV路径]", file=sys.stderr)
         sys.exit(1)
 
     fp = sys.argv[1]
@@ -165,15 +161,15 @@ if __name__ == '__main__':
     data = parse_phylotree(fp)
     print(f"\n共提取 {len(data)} 个单倍群节点", file=sys.stderr)
 
-    fieldnames = ['haplogroup', 'depth', 'parent', 'mutations']
+    fieldnames = ['Haplogroup', 'Level', 'Parent', 'Mutations']
 
     if out_path:
         with open(out_path, 'w', newline='', encoding='utf-8-sig') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
             writer.writerows(data)
         print(f"已写入：{out_path}", file=sys.stderr)
     else:
-        writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
+        writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames, delimiter='\t')
         writer.writeheader()
         writer.writerows(data)
