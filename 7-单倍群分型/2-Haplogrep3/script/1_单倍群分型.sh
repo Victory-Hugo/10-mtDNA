@@ -5,8 +5,8 @@
 #*###############################
 
 # 设置输入和输出目录
-input_dir="/mnt/l/22-WHALE/1-数据/data/低深度/output/"
-output_dir="/mnt/l/22-WHALE/1-数据/data/低深度/fasta"
+input_dir="/home/luolintao/P1-LLT-23K-mtDNA/10-单倍群分型软件/3-phyloMT/input/vcf/"
+output_dir="/home/luolintao/P1-LLT-23K-mtDNA/10-单倍群分型软件/3-phyloMT/output/预期"
 SOFTWARE_DIR="/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/7-单倍群分型/2-Haplogrep3"
 
 # 检查输出目录是否存在，如果不存在则创建
