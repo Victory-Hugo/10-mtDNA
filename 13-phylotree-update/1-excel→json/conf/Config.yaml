@@ -14,6 +14,7 @@ paths:
   input_excel: "input/线粒体DNA系统发育树.xlsx"  # 输入 Excel 文件
   template_json: "template/phylotree_index_withacc.json"  # 结构模板 JSON
   output_json: "output/phylotree_build_17.3.json"  # 最终输出 JSON
+  output_tsv: "output/phylotree_build_17.3.tsv"  # 最终输出 TSV
   python_dir: "python"  # Python 模块目录
   helper_dir: "script"  # Shell 辅助脚本目录
   output_dir: "output"  # 输出目录
@@ -32,7 +33,7 @@ tools:
 # 运行参数：Excel sheet 与输出格式控制
 # --------------------------------------------------------------------- #
 runtime:
-  phylotree_sheet: "Phylotree build 18"  # 系统发育树所在 sheet
-  correction_sheet: "17→18部分节点校正"  # 可选：旧节点名到 build 18 节点名校正表
+  phylotree_sheet: "Phylotree build 17.3"  # 系统发育树所在 sheet
+  correction_sheet: "17.2→17.3部分节点校正"  # 可选：旧节点名到 build 17.3 节点名校正表
   indent: 2  # JSON 缩进空格数
   overwrite: true  # 是否允许覆盖已存在的输出 JSON

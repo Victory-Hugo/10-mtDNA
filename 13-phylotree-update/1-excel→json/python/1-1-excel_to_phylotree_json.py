@@ -176,6 +176,16 @@ def build_output(
     }
 
 
+def write_tsv(haplogroups: dict[str, dict[str, Any]], output_tsv: Path) -> None:
+    """将 haplogroups 写为 TSV 文件（Haplogroup/Level/Parent/Mutations）。"""
+    output_tsv.parent.mkdir(parents=True, exist_ok=True)
+    with output_tsv.open("w", encoding="utf-8", newline="") as handle:
+        handle.write("Haplogroup\tLevel\tParent\tMutations\n")
+        for name, record in haplogroups.items():
+            handle.write(f"{name}\t{record['level']}\t{record['parent']}\t{record['mutations']}\n")
+    LOG.info("TSV 已写出: %s (%d 行)", output_tsv, len(haplogroups))
+
+
 def run(
     input_excel: str,
     template_json: str,
@@ -183,6 +193,7 @@ def run(
     sheet_name: str = "Phylotree build 18",
     correction_sheet: str | None = "17→18部分节点校正",
     indent: int = 2,
+    output_tsv: str | None = None,
 ) -> dict[str, Any]:
     """执行 Excel 到 JSON 转换，并返回运行摘要。"""
     input_path = Path(input_excel)
@@ -194,6 +205,9 @@ def run(
     with output_path.open("w", encoding="utf-8") as handle:
         json.dump(output, handle, ensure_ascii=False, indent=indent)
         handle.write("\n")
+
+    if output_tsv:
+        write_tsv(output["haplogroups"], Path(output_tsv))
 
     summary = {
         "output_json": str(output_path),
@@ -213,6 +227,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sheet-name", default="Phylotree build 18", help="系统发育树 sheet 名称")
     parser.add_argument("--correction-sheet", default="17→18部分节点校正", help="节点名校正 sheet 名称")
     parser.add_argument("--indent", type=int, default=2, help="JSON 缩进空格数")
+    parser.add_argument("--output-tsv", default=None, help="输出 TSV 文件（可选）")
     parser.add_argument("--log-level", default="INFO", help="日志级别")
     return parser
 
@@ -233,6 +248,7 @@ def main(argv: list[str] | None = None) -> int:
             sheet_name=args.sheet_name,
             correction_sheet=args.correction_sheet,
             indent=args.indent,
+            output_tsv=args.output_tsv,
         )
     except Exception as exc:
         LOG.error("%s", exc)
