@@ -1,0 +1,9 @@
+id: phylotree-new-rsrs
+version: 17.2
+name: PhyloTree New (RSRS)
+category: RSRS (Human mtDNA)
+description: New phylotree JSON (RSRS-based, no coordinate conversion; use with RSRS-coordinate VCF/HSD/FASTA)
+tree: phylotree_index_withacc.json
+weights: weights.txt
+fasta: rsrs.fasta
+alignmentRules: rules.csv
