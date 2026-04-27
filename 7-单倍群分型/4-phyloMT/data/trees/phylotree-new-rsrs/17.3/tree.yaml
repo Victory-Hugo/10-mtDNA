@@ -1,0 +1,10 @@
+id: phylotree-new-rcrs
+version: 17.2
+name: PhyloTree New (rCRS)
+category: rCRS (Human mtDNA)
+description: New phylotree JSON (RSRS-based internally, converted to rCRS coordinates at load time; use with rCRS-coordinate VCF/HSD/FASTA)
+tree: phylotree_index_withacc.json
+weights: weights.txt
+fasta: rcrs.fasta
+rsrsFasta: rsrs.fasta
+alignmentRules: rules.csv

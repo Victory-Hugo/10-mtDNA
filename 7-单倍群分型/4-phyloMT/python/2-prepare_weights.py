@@ -35,7 +35,7 @@ from collections import Counter
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
-JSON_PATH = PROJECT_DIR / "data" / "trees" / "phylotree-new-rcrs" / "17.2" / "phylotree_index_withacc.json"
+JSON_PATH = PROJECT_DIR / "data" / "trees" / "phylotree-new-rcrs" / "17.3" / "phylotree_index_withacc.json"
 OUT_PATH = PROJECT_DIR / "tmp" / "weights.txt"
 
 SCALE = 1.71
