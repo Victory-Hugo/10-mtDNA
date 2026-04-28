@@ -34,3 +34,15 @@ nohup.out
 11-样本筛选与单倍群分析流程/tmp/
 
 11-样本筛选与单倍群分析流程/output/*
+
+12-单倍群年龄估计/data/17.2/ancestral_sequences.fasta
+
+12-单倍群年龄估计/data/17.3/ancestral_sequences_17.3.fasta
+
+12-单倍群年龄估计/data/17.2/merged_clean.vcf.gz
+
+12-单倍群年龄估计/data/17.3/merged_clean.vcf.gz
+
+12-单倍群年龄估计/META/2-单倍群信息.tsv
+
+12-单倍群年龄估计/output
