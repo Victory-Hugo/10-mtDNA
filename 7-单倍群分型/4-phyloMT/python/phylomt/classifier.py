@@ -5,23 +5,72 @@ from __future__ import annotations
 import multiprocessing
 from typing import TYPE_CHECKING
 
-from .models import ClassificationHit, SampleProfile, TreeBundle, TreeNode
-from .mutations import position_covered, sum_weights
+from .models import AnnotationEntry, ClassificationHit, SampleProfile, TreeBundle, TreeNode
+from .mutations import base_token, mutation_position, position_covered, sum_weights
 
 if TYPE_CHECKING:
     pass
 
 # 进程池 initializer 使用的全局上下文（子进程中）
-_worker_node_profiles: list[tuple[str, list[str]]] = []
+_worker_node_profiles: list[tuple[str, list[str], list[str]]] = []
 _worker_node_order: dict[str, int] = {}
 _worker_weights: dict[str, float] = {}
+_worker_hotspots: set[str] = set()
+_worker_annotation_db: dict[str, AnnotationEntry] = {}
 
 
-def _init_worker(node_profiles, node_order, weights):
+def _init_worker(node_profiles, node_order, weights, hotspots, annotation_db):
     global _worker_node_profiles, _worker_node_order, _worker_weights
+    global _worker_hotspots, _worker_annotation_db
     _worker_node_profiles = node_profiles
     _worker_node_order = node_order
     _worker_weights = weights
+    _worker_hotspots = hotspots
+    _worker_annotation_db = annotation_db
+
+
+def _annotate_extra(token: str) -> str:
+    """将单个 extra 变异分类为 hotspot / localPrivateMutation / globalPrivateMutation。"""
+    if token in _worker_hotspots:
+        return "hotspot"
+    entry = _worker_annotation_db.get(token)
+    if entry is None:
+        return "globalPrivateMutation"
+    if entry.in_phylotree:
+        return "localPrivateMutation"
+    return "globalPrivateMutation"
+
+
+def _format_aac(token: str) -> str:
+    """若变异有氨基酸变化注释，返回格式化字符串，否则返回空字符串。"""
+    entry = _worker_annotation_db.get(token)
+    if entry is None or not entry.aac:
+        return ""
+    return f"{token} [{entry.aac}| Codon {entry.codon_pos} | {entry.gene} ]"
+
+
+def _confirm_back_mutations(
+    path_back_muts: list[str],
+    path_variant_positions: set[int],
+    sample_set: set[str],
+    covered: "set[int] | None",
+) -> list[str]:
+    """检查路径上的返祖变异是否被样本确认（样本在该位置无变异）。"""
+    confirmed: list[str] = []
+    for bm_token in path_back_muts:
+        bm_base = base_token(bm_token)
+        pos = mutation_position(bm_base)
+        if pos is None:
+            continue
+        if not position_covered(bm_base, covered):
+            continue
+        # 若该位点在 path_variants 中有变异，说明返祖后又发生了新突变，跳过
+        if pos in path_variant_positions:
+            continue
+        # 样本在该位点无变异 → 返祖得到确认
+        if not any(mutation_position(v) == pos for v in sample_set):
+            confirmed.append(bm_base + "!")
+    return confirmed
 
 
 def _classify_one(args: tuple) -> tuple[str, list[ClassificationHit]]:
@@ -33,7 +82,7 @@ def _classify_one(args: tuple) -> tuple[str, list[ClassificationHit]]:
     sample_weight = sum_weights(variants, _worker_weights)
     sample_hits: list[ClassificationHit] = []
 
-    for name, path_variants in _worker_node_profiles:
+    for name, path_variants, path_back_muts in _worker_node_profiles:
         covered_expected = [v for v in path_variants if position_covered(v, covered)]
         covered_expected_set = set(covered_expected)
         expected_set = set(path_variants)
@@ -43,6 +92,13 @@ def _classify_one(args: tuple) -> tuple[str, list[ClassificationHit]]:
         found_weight = sum_weights(found, _worker_weights)
         expected_weight = sum_weights(covered_expected, _worker_weights)
         quality = kulczynski(found_weight, sample_weight, expected_weight)
+
+        path_variant_positions = {mutation_position(v) for v in path_variants if mutation_position(v) is not None}
+        confirmed_back = _confirm_back_mutations(path_back_muts, path_variant_positions, sample_set, covered)
+
+        annotated_extra = [(v, _annotate_extra(v)) for v in extra]
+        aac_list = [s for v, _ in annotated_extra if (s := _format_aac(v))]
+
         sample_hits.append(
             ClassificationHit(
                 sample_id=sample_id,
@@ -56,6 +112,9 @@ def _classify_one(args: tuple) -> tuple[str, list[ClassificationHit]]:
                 found_weight=found_weight,
                 expected_weight=expected_weight,
                 sample_weight=sample_weight,
+                confirmed_back_mutations=confirmed_back,
+                annotated_extra_variants=annotated_extra,
+                aac_in_remainings=aac_list,
             )
         )
 
@@ -74,9 +133,11 @@ def classify_samples(
     """对多个样本执行分类，支持多进程并行。"""
 
     nodes = flatten_nodes(tree_bundle.root)
-    node_profiles = [(node.name, node.path_variants) for node in nodes]
+    node_profiles = [(node.name, node.path_variants, node.path_back_mutations) for node in nodes]
     node_order = {node.name: index for index, node in enumerate(nodes)}
     weights = tree_bundle.weights
+    hotspots = tree_bundle.hotspots
+    annotation_db = tree_bundle.annotation_db
 
     tasks = [
         (s.sample_id, s.range_text, s.variants, s.covered_positions, hits)
@@ -88,11 +149,11 @@ def classify_samples(
         with ctx.Pool(
             processes=min(threads, len(samples)),
             initializer=_init_worker,
-            initargs=(node_profiles, node_order, weights),
+            initargs=(node_profiles, node_order, weights, hotspots, annotation_db),
         ) as pool:
             results_list = pool.map(_classify_one, tasks)
     else:
-        _init_worker(node_profiles, node_order, weights)
+        _init_worker(node_profiles, node_order, weights, hotspots, annotation_db)
         results_list = [_classify_one(t) for t in tasks]
 
     return {sid: hits_list for sid, hits_list in results_list}

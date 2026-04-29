@@ -19,6 +19,17 @@ class SampleProfile:
 
 
 @dataclass(slots=True)
+class AnnotationEntry:
+    """单个变异的注释信息。"""
+
+    category: str
+    in_phylotree: bool
+    aac: str
+    codon_pos: str
+    gene: str
+
+
+@dataclass(slots=True)
 class TreeNode:
     """树节点。"""
 
@@ -26,6 +37,7 @@ class TreeNode:
     own_variants: list[str]
     children: list["TreeNode"] = field(default_factory=list)
     path_variants: list[str] = field(default_factory=list)
+    path_back_mutations: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -40,6 +52,8 @@ class TreeBundle:
     root: TreeNode
     weights: dict[str, float]
     rules: list[tuple[list[str], list[str]]]
+    hotspots: set[str] = field(default_factory=set)
+    annotation_db: "dict[str, AnnotationEntry]" = field(default_factory=dict)
 
     @property
     def full_id(self) -> str:
@@ -61,3 +75,6 @@ class ClassificationHit:
     found_weight: float
     expected_weight: float
     sample_weight: float
+    confirmed_back_mutations: list[str] = field(default_factory=list)
+    annotated_extra_variants: "list[tuple[str, str]]" = field(default_factory=list)
+    aac_in_remainings: list[str] = field(default_factory=list)

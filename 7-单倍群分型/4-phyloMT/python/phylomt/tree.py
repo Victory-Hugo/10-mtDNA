@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 import re
 import xml.etree.ElementTree as ET
@@ -10,8 +11,8 @@ from pathlib import Path
 
 from Bio import SeqIO
 
-from .models import TreeBundle, TreeNode
-from .mutations import apply_variants_to_profile, clean_token
+from .models import AnnotationEntry, TreeBundle, TreeNode
+from .mutations import apply_variants_to_profile, clean_token, is_back_mutation
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[2]
@@ -98,6 +99,8 @@ def load_tree_bundle(tree_dir: Path) -> TreeBundle:
         fill_path_variants(root, [])
     weights = parse_weights(tree_dir / metadata["weights"])
     rules = parse_rules(tree_dir / metadata["alignmentRules"])
+    hotspots = load_hotspots(tree_dir)
+    annotation_db = load_annotation_db(tree_dir)
 
     return TreeBundle(
         tree_id=str(tree_dir.parent.name),
@@ -108,6 +111,8 @@ def load_tree_bundle(tree_dir: Path) -> TreeBundle:
         root=root,
         weights=weights,
         rules=rules,
+        hotspots=hotspots,
+        annotation_db=annotation_db,
     )
 
 
@@ -292,12 +297,98 @@ def parse_tree_node(element: ET.Element) -> TreeNode:
     )
 
 
-def fill_path_variants(node: TreeNode, parent_variants: list[str]) -> None:
-    """为每个节点预计算路径累计变异。"""
+def fill_path_variants(
+    node: TreeNode,
+    parent_variants: list[str],
+    parent_back_muts: "list[str] | None" = None,
+) -> None:
+    """为每个节点预计算路径累计变异，同时追踪路径上的返祖变异。"""
 
+    if parent_back_muts is None:
+        parent_back_muts = []
     node.path_variants = apply_variants_to_profile(parent_variants, node.own_variants)
+    own_back = [clean_token(t) for t in node.own_variants if is_back_mutation(clean_token(t))]
+    node.path_back_mutations = parent_back_muts + own_back
     for child in node.children:
-        fill_path_variants(child, node.path_variants)
+        fill_path_variants(child, node.path_variants, node.path_back_mutations)
+
+
+def load_hotspots(tree_dir: Path) -> set[str]:
+    """从 tree.yaml 读取 hotspot 变异列表。"""
+
+    hotspots: set[str] = set()
+    metadata_path = tree_dir / "tree.yaml"
+    if not metadata_path.exists():
+        return hotspots
+
+    in_hotspots = False
+    with metadata_path.open("r", encoding="utf-8") as handle:
+        for raw_line in handle:
+            line = raw_line.rstrip("\n")
+            stripped = line.strip()
+            if stripped == "hotspots:":
+                in_hotspots = True
+                continue
+            if in_hotspots:
+                if stripped.startswith("- "):
+                    item = stripped[2:].strip().strip("\"'")
+                    if item:
+                        hotspots.add(item)
+                elif stripped and not line[:1].isspace():
+                    in_hotspots = False
+    return hotspots
+
+
+def load_annotation_db(tree_dir: Path) -> "dict[str, AnnotationEntry]":
+    """从 annotations/rCRS_annotation_*.txt.gz 加载变异注释数据库。"""
+
+    annotation_dir = tree_dir / "annotations"
+    if not annotation_dir.exists():
+        return {}
+
+    annotation_files = sorted(annotation_dir.glob("rCRS_annotation_*.txt.gz"))
+    if not annotation_files:
+        return {}
+
+    db: dict[str, AnnotationEntry] = {}
+    with gzip.open(annotation_files[0], "rt", encoding="utf-8") as handle:
+        header_line = handle.readline().rstrip("\n")
+        headers = header_line.split("\t")
+        col = {name: i for i, name in enumerate(headers)}
+
+        mut_col = col.get("Mutation", 0)
+        cat_col = col.get("Category", 6)
+        phylo_col = col.get("Phylotree17_haplogroups", 7)
+        aac_col = col.get("AAC", 12)
+        codon_col = col.get("CodonPosition", 13)
+        locus_col = col.get("Maplocus", 5)
+
+        for line in handle:
+            fields = line.rstrip("\n").split("\t")
+            if len(fields) <= mut_col:
+                continue
+            mutation = fields[mut_col]
+            if not mutation:
+                continue
+
+            def _get(idx: int) -> str:
+                return fields[idx] if idx < len(fields) else ""
+
+            category = _get(cat_col)
+            phylo = _get(phylo_col)
+            aac = _get(aac_col)
+            codon_pos = _get(codon_col)
+            maplocus = _get(locus_col)
+            gene = maplocus[3:] if maplocus.startswith("MT-") else maplocus
+
+            db[mutation] = AnnotationEntry(
+                category=category,
+                in_phylotree=bool(phylo.strip()),
+                aac=aac,
+                codon_pos=codon_pos,
+                gene=gene,
+            )
+    return db
 
 
 def parse_weights(weights_path: Path) -> dict[str, float]:

@@ -11,7 +11,8 @@ _BASIC_HEADER = '"SampleID"\t"Haplogroup"\t"Rank"\t"Quality"\t"Range"\n'
 _EXTENDED_COLUMNS = [
     "SampleID", "Haplogroup", "Rank", "Quality", "Range",
     "Input_Sample", "Found_Polymorphisms", "Missing_Polymorphisms",
-    "Extra_Polymorphisms", "Found_Weight", "Expected_Weight", "Sample_Weight",
+    "Extra_Polymorphisms", "AAC_In_Remainings",
+    "Found_Weight", "Expected_Weight", "Sample_Weight",
 ]
 _EXTENDED_HEADER = "\t".join(f'"{c}"' for c in _EXTENDED_COLUMNS) + "\n"
 
@@ -51,6 +52,13 @@ def write_extended_report(
             handle.write(_EXTENDED_HEADER)
         for sample_id, hits in all_hits.items():
             for hit in hits:
+                all_found = sorted(
+                    set(hit.found_variants) | set(hit.confirmed_back_mutations),
+                    key=lambda t: (int("".join(c for c in t if c.isdigit()) or "0"), t),
+                )
+                annotated_extra = " ".join(
+                    f"{v} ({ann})" for v, ann in hit.annotated_extra_variants
+                )
                 values = [
                     sample_id,
                     hit.haplogroup,
@@ -58,9 +66,10 @@ def write_extended_report(
                     f"{hit.quality:.4f}",
                     hit.range_text,
                     " ".join(sorted(set(hit.found_variants + hit.extra_variants))),
-                    " ".join(hit.found_variants),
+                    " ".join(all_found),
                     " ".join(hit.missing_variants),
-                    " ".join(hit.extra_variants),
+                    annotated_extra,
+                    " ".join(hit.aac_in_remainings),
                     f"{hit.found_weight:.4f}",
                     f"{hit.expected_weight:.4f}",
                     f"{hit.sample_weight:.4f}",

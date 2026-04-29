@@ -1,5 +1,5 @@
 id: phylotree-new-rcrs
-version: 17.2
+version: 17.3
 name: PhyloTree New (rCRS)
 category: rCRS (Human mtDNA)
 description: New phylotree JSON (RSRS-based internally, converted to rCRS coordinates at load time; use with rCRS-coordinate VCF/HSD/FASTA)
