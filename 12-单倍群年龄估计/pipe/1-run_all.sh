@@ -177,6 +177,17 @@ else
 fi
 
 # =============================================================================
+# Step 5b：祖先-后代 CI 一致性检查（complete 区域）
+# =============================================================================
+log "[Step 5b] CI 一致性检查（complete 区域 → 降级 confidence）..."
+$PYTHON "$PYTHON_DIR/s05b_ci_consistency.py" \
+    --mode      rho \
+    --input     "$RHO_DATING" \
+    --hap-graph "$HAP_GRAPH" \
+    --output    "$RHO_DATING" \
+    2>&1 | tee "$LOG_DIR/s05b_ci_consistency.log"
+
+# =============================================================================
 # Step 6：验证关键节点
 # =============================================================================
 VALIDATION="$RESULTS/validation_key_nodes.tsv"
