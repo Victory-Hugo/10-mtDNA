@@ -4,13 +4,13 @@
 # =====================================================================
 
 project:
-  base_dir: "/home/luolintao/P1-LLT-23K-mtDNA/12-单倍群年龄估计"  # 项目根目录
+  base_dir: "/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/12-单倍群年龄估计"  # 项目根目录
 
 # --------------------------------------------------------------------- #
 # 输入数据路径                                                           #
 # --------------------------------------------------------------------- #
 paths:
-  vcf: "data/merged_clean.vcf.gz"                      # 合并VCF（祖先+现代）
+  vcf: "data/17.3/merged_clean.vcf.gz"                      # 合并VCF（祖先+现代）
   phylotree_json: "data/17.3/phylotree_build_17.3.json"  # PhyloTree Build 17
   back_mutation_tsv: "META/1-回复突变.tsv"             # 位点注释（synonymous/nonsynonymous）
   haplogrep_tsv: "META/2-单倍群信息.tsv"               # Haplogrep3分型结果

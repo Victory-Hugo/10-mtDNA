@@ -132,6 +132,8 @@ def main() -> int:
 
     args = parser.parse_args()
     try:
+        if args.input_list:
+            return run_batch(args)
         return run_classify(args)
     except ValueError as exc:
         print_pretty_error(str(exc))
@@ -154,6 +156,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--chip", action="store_true", help="芯片/微阵列模式：仅在 VCF 覆盖位点评估期望变异")
     parser.add_argument("--trees-dir", default=None, help="树目录 默认情况下为项目 data/trees 目录")
     parser.add_argument("--list-trees", action="store_true", help="列出 trees-dir 下所有可用树并退出")
+    parser.add_argument("--input-list", default=None, help="批量模式：含 VCF 路径的文本文件（每行一个），加载树一次处理全部")
     return parser
 
 
@@ -284,6 +287,77 @@ def resolve_installed_tree_dir(tree_id: str, version: str, trees_dir: Path) -> P
         installed_text = ", ".join(installed)
         raise ValueError(f"未在 {trees_dir} 中找到 {tree_id}@{version}。当前可用树: {installed_text}")
     raise ValueError(f"未在 {trees_dir} 中找到可用树。")
+
+
+def run_batch(args: argparse.Namespace) -> int:
+    """批量模式：加载树一次，依次处理多个 VCF，结果写入单个输出文件。"""
+
+    from .classifier import classify_samples
+    from .io.readers import load_samples
+    from .report import write_classification_report, write_extended_report
+
+    ui = ConsoleUI()
+    ui.logo()
+    ui.section("phyloMT — 批量模式", "一次加载树，处理多个 VCF")
+
+    if not args.tree:
+        raise ValueError("批量模式需要 --tree 参数。")
+    if not args.output:
+        raise ValueError("批量模式需要 --output 参数。")
+
+    trees_dir = resolve_trees_dir(args.trees_dir)
+    tree_id, version = split_tree_id(args.tree)
+    tree_dir = resolve_installed_tree_dir(tree_id, version, trees_dir)
+
+    ui.stage("1/3", "加载系统发育树（仅一次）")
+    tree_bundle = load_tree_bundle(tree_dir)
+    ui.kv("Tree dir", str(tree_dir))
+
+    hits_n = args.hits or DEFAULT_HITS
+    het_level = args.het_level if args.het_level is not None else DEFAULT_HET_LEVEL
+    output_path = Path(args.output).resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    input_list_path = Path(args.input_list).resolve()
+    with input_list_path.open("r", encoding="utf-8") as handle:
+        vcf_paths = [line.strip() for line in handle if line.strip() and not line.startswith("#")]
+
+    total = len(vcf_paths)
+    ui.stage("2/3", f"处理 {total} 个 VCF 文件")
+    ui.kv("Output", str(output_path))
+
+    error_count = 0
+    # 首次写入：带表头；后续追加：跳过表头
+    first = True
+    for vcf_str in vcf_paths:
+        vcf_path = Path(vcf_str)
+        if not vcf_path.exists():
+            ui.warn(f"VCF 不存在，跳过: {vcf_path}")
+            error_count += 1
+            continue
+        try:
+            samples = load_samples(
+                vcf_path,
+                tree_bundle.reference_sequence,
+                tree_bundle.rules,
+                het_level,
+                threads=1,
+                chip=args.chip,
+            )
+            result = classify_samples(samples, tree_bundle, hits_n, threads=1)
+            write_classification_report(output_path, result, append=not first)
+            if args.extended_report:
+                write_extended_report(output_path, result, append=not first)
+            first = False
+        except Exception as exc:
+            ui.warn(f"处理失败，跳过: {vcf_path.name} — {exc}")
+            error_count += 1
+
+    ui.stage("3/3", "完成")
+    ui.kv("成功", str(total - error_count))
+    ui.kv("失败", str(error_count))
+    ui.ok(f"批量完成 {total - error_count}/{total}")
+    return 1 if error_count else 0
 
 
 def run_classify(args: argparse.Namespace) -> int:

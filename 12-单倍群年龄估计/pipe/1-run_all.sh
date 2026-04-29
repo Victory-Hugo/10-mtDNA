@@ -103,7 +103,7 @@ if [[ ! -f "$HAP_DESC" ]]; then
         NR == 1 {
             for (i = 1; i <= NF; i++) {
                 col = tolower($i)
-                gsub(/^[[:space:]]+|[[:space:]]+$/, "", col)
+                gsub(/^[[:space:]"]+|[[:space:]"]+$/, "", col)
                 if (col == "quality") quality_col = i
             }
             if (!quality_col) {
@@ -113,12 +113,11 @@ if [[ ! -f "$HAP_DESC" ]]; then
             print
             next
         }
-        ($quality_col + 0) >= qmin {
-            print
-            kept++
-        }
-        {
+        NR > 1 {
             total++
+            q = $quality_col
+            gsub(/"/, "", q)
+            if ((q + 0) >= qmin) { print; kept++ }
         }
         END {
             if (quality_col) {

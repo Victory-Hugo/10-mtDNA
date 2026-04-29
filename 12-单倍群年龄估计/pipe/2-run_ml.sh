@@ -127,6 +127,7 @@ $PYTHON "$PYTHON_DIR/s10_ml_dating.py" \
     --treefile          "$TREEFILE" \
     --map               "$NAME_MAP" \
     --rho               "$RHO_DATING" \
+    --hap-graph         "$HAP_GRAPH" \
     --root-age          "$ROOT_AGE" \
     --output-dating     "$ML_DATING" \
     --output-comparison "$ML_COMPARISON" \

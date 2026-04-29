@@ -29,7 +29,7 @@ import pandas as pd
 log = logging.getLogger(__name__)
 
 # 祖先样本ID前缀
-ANCESTOR_PREFIX = "HaplogroupAnces_"
+ANCESTOR_PREFIX = "Haplogroup_"
 
 
 def _split_samples(all_samples: list[str]) -> tuple[list[str], list[str]]:

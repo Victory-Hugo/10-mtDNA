@@ -6,16 +6,31 @@ from pathlib import Path
 
 from .models import ClassificationHit, SampleProfile, TreeBundle
 
+_BASIC_HEADER = '"SampleID"\t"Haplogroup"\t"Rank"\t"Quality"\t"Range"\n'
+
+_EXTENDED_COLUMNS = [
+    "SampleID", "Haplogroup", "Rank", "Quality", "Range",
+    "Input_Sample", "Found_Polymorphisms", "Missing_Polymorphisms",
+    "Extra_Polymorphisms", "Found_Weight", "Expected_Weight", "Sample_Weight",
+]
+_EXTENDED_HEADER = "\t".join(f'"{c}"' for c in _EXTENDED_COLUMNS) + "\n"
+
+
+def _extended_path(output_path: Path) -> Path:
+    return output_path.with_name(f"{output_path.stem}.extended{output_path.suffix or '.txt'}")
+
 
 def write_classification_report(
     output_path: Path,
     all_hits: dict[str, list[ClassificationHit]],
+    append: bool = False,
 ) -> None:
-    """写默认 TSV 输出。"""
+    """写默认 TSV 输出。append=True 时跳过表头并以追加模式写入。"""
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8") as handle:
-        handle.write('"SampleID"\t"Haplogroup"\t"Rank"\t"Quality"\t"Range"\n')
+    with output_path.open("a" if append else "w", encoding="utf-8") as handle:
+        if not append:
+            handle.write(_BASIC_HEADER)
         for sample_id, hits in all_hits.items():
             for hit in hits:
                 handle.write(
@@ -26,26 +41,14 @@ def write_classification_report(
 def write_extended_report(
     output_path: Path,
     all_hits: dict[str, list[ClassificationHit]],
+    append: bool = False,
 ) -> None:
-    """写扩展 TSV 输出。"""
+    """写扩展 TSV 输出。append=True 时跳过表头并以追加模式写入。"""
 
-    extended_path = output_path.with_name(f"{output_path.stem}.extended{output_path.suffix or '.txt'}")
-    with extended_path.open("w", encoding="utf-8") as handle:
-        header = [
-            "SampleID",
-            "Haplogroup",
-            "Rank",
-            "Quality",
-            "Range",
-            "Input_Sample",
-            "Found_Polymorphisms",
-            "Missing_Polymorphisms",
-            "Extra_Polymorphisms",
-            "Found_Weight",
-            "Expected_Weight",
-            "Sample_Weight",
-        ]
-        handle.write("\t".join(f'"{column}"' for column in header) + "\n")
+    ext_path = _extended_path(output_path)
+    with ext_path.open("a" if append else "w", encoding="utf-8") as handle:
+        if not append:
+            handle.write(_EXTENDED_HEADER)
         for sample_id, hits in all_hits.items():
             for hit in hits:
                 values = [
@@ -62,7 +65,7 @@ def write_extended_report(
                     f"{hit.expected_weight:.4f}",
                     f"{hit.sample_weight:.4f}",
                 ]
-                handle.write("\t".join(f'"{value}"' for value in values) + "\n")
+                handle.write("\t".join(f'"{v}"' for v in values) + "\n")
 
 
 def write_reconstructed_fasta(

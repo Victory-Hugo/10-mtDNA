@@ -1,0 +1,2 @@
+"SampleID"	"Haplogroup"	"Rank"	"Quality"	"Range"	"Input_Sample"	"Found_Polymorphisms"	"Missing_Polymorphisms"	"Extra_Polymorphisms"	"Found_Weight"	"Expected_Weight"	"Sample_Weight"
+"HG00365"	"H1c"	"1"	"1.0000"	"1-16569"	"1438G 15326G 263G 3010A 3107d 4769G 477C 750G 8860G"	"263G 477C 750G 1438G 3010A 4769G 8860G 15326G"	"16519C"	"3107d"	"30.7000"	"30.7000"	"30.7000"

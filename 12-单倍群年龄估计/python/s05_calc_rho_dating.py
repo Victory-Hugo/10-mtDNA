@@ -3,7 +3,7 @@ s05_calc_rho_dating.py
 对所有单倍群节点计算ρ统计量，并套用Soares 2009区域公式输出TMRCA估计。
 
 方法：
-    ρ = HaplogroupAnces_H 到所有后代现代样本的平均有效突变距离
+    ρ = Haplogroup_H 到所有后代现代样本的平均有效突变距离
     SE = Saillard-style 标准误
     age = Soares 2009 区域校正公式
 
@@ -33,7 +33,7 @@ from tqdm import tqdm
 
 log = logging.getLogger(__name__)
 
-ANCESTOR_PREFIX = "HaplogroupAnces_"
+ANCESTOR_PREFIX = "Haplogroup_"
 
 # 所有区域名及对应Soares线性换算系数（complete用非线性公式）
 REGIONS = ["complete", "synonymous", "hvsi_full", "hvsi_trans", "hvsii", "control"]
