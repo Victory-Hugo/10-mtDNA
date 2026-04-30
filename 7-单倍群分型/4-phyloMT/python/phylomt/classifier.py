@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     pass
 
 # 进程池 initializer 使用的全局上下文（子进程中）
-_worker_node_profiles: list[tuple[str, list[str], list[str]]] = []
+_worker_node_profiles: list[tuple[str, list[str], set[str], set[int], list[str]]] = []
 _worker_node_order: dict[str, int] = {}
 _worker_weights: dict[str, float] = {}
 _worker_hotspots: set[str] = set()
@@ -52,7 +52,7 @@ def _format_aac(token: str) -> str:
 def _confirm_back_mutations(
     path_back_muts: list[str],
     path_variant_positions: set[int],
-    sample_set: set[str],
+    sample_positions: set[int],
     covered: "set[int] | None",
 ) -> list[str]:
     """检查路径上的返祖变异是否被样本确认（样本在该位置无变异）。"""
@@ -64,11 +64,9 @@ def _confirm_back_mutations(
             continue
         if not position_covered(bm_base, covered):
             continue
-        # 若该位点在 path_variants 中有变异，说明返祖后又发生了新突变，跳过
         if pos in path_variant_positions:
             continue
-        # 样本在该位点无变异 → 返祖得到确认
-        if not any(mutation_position(v) == pos for v in sample_set):
+        if pos not in sample_positions:
             confirmed.append(bm_base + "!")
     return confirmed
 
@@ -78,14 +76,14 @@ def _classify_one(args: tuple) -> tuple[str, list[ClassificationHit]]:
 
     sample_id, range_text, variants, covered_positions, hits = args
     sample_set = set(variants)
+    sample_positions = {mutation_position(v) for v in variants if mutation_position(v) is not None}
     covered = covered_positions
     sample_weight = sum_weights(variants, _worker_weights)
     sample_hits: list[ClassificationHit] = []
 
-    for name, path_variants, path_back_muts in _worker_node_profiles:
+    for name, path_variants, expected_set, path_variant_positions, path_back_muts in _worker_node_profiles:
         covered_expected = [v for v in path_variants if position_covered(v, covered)]
         covered_expected_set = set(covered_expected)
-        expected_set = set(path_variants)
         found = sorted(sample_set & covered_expected_set, key=_variant_sort_key)
         missing = sorted(covered_expected_set - sample_set, key=_variant_sort_key)
         extra = sorted(sample_set - expected_set, key=_variant_sort_key)
@@ -93,8 +91,7 @@ def _classify_one(args: tuple) -> tuple[str, list[ClassificationHit]]:
         expected_weight = sum_weights(covered_expected, _worker_weights)
         quality = kulczynski(found_weight, sample_weight, expected_weight)
 
-        path_variant_positions = {mutation_position(v) for v in path_variants if mutation_position(v) is not None}
-        confirmed_back = _confirm_back_mutations(path_back_muts, path_variant_positions, sample_set, covered)
+        confirmed_back = _confirm_back_mutations(path_back_muts, path_variant_positions, sample_positions, covered)
 
         annotated_extra = [(v, _annotate_extra(v)) for v in extra]
         aac_list = [s for v, _ in annotated_extra if (s := _format_aac(v))]
@@ -133,7 +130,16 @@ def classify_samples(
     """对多个样本执行分类，支持多进程并行。"""
 
     nodes = flatten_nodes(tree_bundle.root)
-    node_profiles = [(node.name, node.path_variants, node.path_back_mutations) for node in nodes]
+    node_profiles = [
+        (
+            node.name,
+            node.path_variants,
+            set(node.path_variants),
+            {mutation_position(v) for v in node.path_variants if mutation_position(v) is not None},
+            node.path_back_mutations,
+        )
+        for node in nodes
+    ]
     node_order = {node.name: index for index, node in enumerate(nodes)}
     weights = tree_bundle.weights
     hotspots = tree_bundle.hotspots
