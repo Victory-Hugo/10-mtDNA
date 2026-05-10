@@ -13,7 +13,7 @@ DONE_FILE="${OUTDIR}/done_samples.txt"
 LOGDIR="${VCFDIR}/logs"
 TMPDIR="${BASEDIR}/tmp/1-batch-vcf"
 
-TREE="phylotree-new-rcrs@17.3"
+TREE="phylotree-new-rcrs@17.2"
 HITS=1
 JOBS="${JOBS:-16}"
 CHUNK_SIZE="${CHUNK_SIZE:-200}"
