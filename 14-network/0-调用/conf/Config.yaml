@@ -1,0 +1,59 @@
+# =====================================================================
+# mtDNA network pipeline 配置文件
+# 所有相对路径均相对于 project.base_dir
+# =====================================================================
+
+project:
+  base_dir: "/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/14-network/0-调用"  # pipeline 项目根目录
+  input_fasta: "input/example.fasta"                 # 输入 FASTA，要求为已对齐序列
+  input_meta: "input/example.tsv"                    # 输入样本基础信息表，TSV 格式
+  sample_id_column: "SampleID"                       # 样本 ID 列名，需与 FASTA header 匹配
+  reference_id: "YN-344_BB0_00"                      # McAN mutation 转换使用的参考序列 ID
+
+# --------------------------------------------------------------------- #
+# 目录结构：输出、临时文件和日志路径                                      #
+# --------------------------------------------------------------------- #
+paths:
+  python_dir: "python"                               # Python 模块目录
+  helper_dir: "script"                               # shell 辅助脚本目录
+  temp_dir: "temp"                                   # 临时目录根目录
+  log_dir: "log"                                     # 日志目录
+  output_dir: "output"                               # 输出根目录
+  prepare_table_dir: "output/1-prepare_input/1-table"    # 输入整理表格输出
+  prepare_report_dir: "output/1-prepare_input/3-report"  # 输入整理报告输出
+  fasthan_table_dir: "output/2-fasthan/1-table"          # fastHaN 网络与配置输出
+  fasthan_report_dir: "output/2-fasthan/3-report"        # fastHaN 报告输出
+  mcan_table_dir: "output/3-mcan/1-table"                # McAN 网络输出
+  mcan_report_dir: "output/3-mcan/3-report"              # McAN 报告输出
+  summary_report_dir: "output/4-report"                  # 总结报告输出
+  temp_prepare_dir: "temp/1-prepare_input"               # 输入整理临时目录
+  temp_fasthan_dir: "temp/2-fasthan"                     # fastHaN 临时目录
+  temp_mcan_dir: "temp/3-mcan"                           # McAN 临时目录
+
+# --------------------------------------------------------------------- #
+# 工具路径：集中管理解释器和外部软件                                      #
+# --------------------------------------------------------------------- #
+tools:
+  conda_bin: "/home/luolintao/miniconda3/condabin/conda"      # conda 可执行文件
+  python_bin: "/home/luolintao/miniconda3/envs/BigLin/bin/python3"  # BigLin 环境 Python
+  fasthan_bin: "../1-fastHaN/fastHaN_linux"                   # fastHaN 可执行文件
+  mcan_bin: "../2-McAN/build/McAN"                            # McAN 可执行文件
+
+# --------------------------------------------------------------------- #
+# 运行参数：选择软件、算法、线程和输出策略                                #
+# --------------------------------------------------------------------- #
+runtime:
+  software: "both"                                      # fasthan / mcan / both
+  threads: 8                                            # fastHaN 和 McAN 使用线程数
+  overwrite: true                                       # true 时允许覆盖本 pipeline 输出
+  fasthan_algorithms: "modified_tcs,mjn,msn"                # fastHaN 算法，支持 original_tcs,modified_tcs,mjn,msn
+  fasthan_original_tcs_args: "-t {threads} -a 1 -m 1"   # original_tcs 额外参数；{threads} 会替换为 runtime.threads
+  fasthan_modified_tcs_args: "-t {threads}"             # modified_tcs 额外参数；不要写 -i 和 -o
+  fasthan_mjn_args: "-t {threads} -e 0"                 # mjn 额外参数；例如调 epsilon 可改 -e
+  fasthan_msn_args: "-e 0"                              # msn 额外参数；msn 当前不支持 -t
+  visual_columns: "Y_Haplogroup,Population,Country"     # 生成 tcsBU 配置的 metadata 列
+  fasthan_color_palette: "#274753,#297270,#299d8f,#8ab07c,#e7c66b,#f3a361,#e66d50"  # fastHaN 分组色板锚点，自动插值到分组数量
+  mcan_country_column: "Country"                        # McAN meta 的 Country 来源列
+  mcan_state_column: "Population"                       # McAN meta 的 State 来源列
+  mcan_city_column: "Ethnic_Group"                      # McAN meta 的 City 来源列
+  mcan_default_date: "2000-01-01"                       # McAN meta 占位日期

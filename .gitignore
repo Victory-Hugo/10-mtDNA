@@ -48,3 +48,9 @@ nohup.out
 12-单倍群年龄估计/output
 
 7-单倍群分型/4-phyloMT/output/vcf
+
+14-network/0-调用/temp
+
+14-network/0-调用/output
+
+14-network/0-调用/log
