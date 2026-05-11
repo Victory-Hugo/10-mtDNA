@@ -43,7 +43,7 @@ tools:
 # 运行参数：选择软件、算法、线程和输出策略                                #
 # --------------------------------------------------------------------- #
 runtime:
-  software: "both"                                      # fasthan / mcan / both
+  software: "fasthan"                                      # fasthan / mcan / both
   threads: 8                                            # fastHaN 和 McAN 使用线程数
   overwrite: true                                       # true 时允许覆盖本 pipeline 输出
   fasthan_algorithms: "modified_tcs,mjn,msn"                # fastHaN 算法，支持 original_tcs,modified_tcs,mjn,msn
@@ -51,7 +51,7 @@ runtime:
   fasthan_modified_tcs_args: "-t {threads}"             # modified_tcs 额外参数；不要写 -i 和 -o
   fasthan_mjn_args: "-t {threads} -e 0"                 # mjn 额外参数；例如调 epsilon 可改 -e
   fasthan_msn_args: "-e 0"                              # msn 额外参数；msn 当前不支持 -t
-  visual_columns: "Y_Haplogroup,Population,Country"     # 生成 tcsBU 配置的 metadata 列
+  visual_columns: "Y_Haplogroup,Population,Country,Linguistic_Family,Continent"     # 生成 tcsBU 配置的 metadata 列
   fasthan_color_palette: "#274753,#297270,#299d8f,#8ab07c,#e7c66b,#f3a361,#e66d50"  # fastHaN 分组色板锚点，自动插值到分组数量
   mcan_country_column: "Country"                        # McAN meta 的 Country 来源列
   mcan_state_column: "Population"                       # McAN meta 的 State 来源列
