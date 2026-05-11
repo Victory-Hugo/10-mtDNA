@@ -156,6 +156,7 @@ function svgStart() {
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });  
+      updateEdgeMutationElements();
       node.attr("x", function(d) { return d.x; })
           .attr("y", function(d) { return d.y; })
           .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
@@ -320,7 +321,7 @@ function svgStart() {
    * Enable editing buttons
    */
   
-  w2ui.Layout_main_toolbar.enable('btn-dellink', 'btn-delnode', 'btn-svgsave','btn-outline','btn-lwidth', 'btn-zoomin', 'btn-zoomout', 'btn-legend');
+  w2ui.Layout_main_toolbar.enable('btn-dellink', 'btn-delnode', 'btn-svgsave','btn-outline','btn-lwidth', 'btn-edge-labels', 'btn-zoomin', 'btn-zoomout', 'btn-legend');
   
   
   /*

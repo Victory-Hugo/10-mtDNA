@@ -74,6 +74,12 @@ var clickLink, clickNode;
 var linewidth = 1;
 
 /*
+ * Edge mutation count display mode: off, number, or segments
+ */
+
+var edgeMutationDisplayMode = 'off';
+
+/*
  * Default zoom
  */
 
@@ -112,5 +118,4 @@ var pattern_names = [
   { icon: 'icon-cross-3', id: 'cross-3'},
   { icon: 'icon-cross-4', id: 'cross-4'}
 ];
-
 

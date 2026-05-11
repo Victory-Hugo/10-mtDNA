@@ -51,6 +51,13 @@ function getLayout(style, groups, haplotypes){
                     { text: '2.0 px', lwidth: "2.0" }
                   ]                
              },
+            { id: 'btn-edge-labels', type: 'menu', caption: 'Edge labels', disabled: true,
+                  items: [
+                    { text: 'Off', mode: 'off' },
+                    { text: '(n)', mode: 'number' },
+                    { text: 'Segments', mode: 'segments' }
+                  ]
+             },
              { id: 'btn-legend', type: 'check', caption: 'Legend', icon: 'icon-legend', disabled: true, checked: false },
           ],
           onClick: function (e) {
@@ -87,6 +94,10 @@ function getLayout(style, groups, haplotypes){
                  */
                 if( target.indexOf('btn-lwidth:') !== -1 ){
                   linewidth = e.subItem.lwidth;
+                  if (svg) updateSVG();
+                } else if( target.indexOf('btn-edge-labels:') !== -1 ){
+                  edgeMutationDisplayMode = e.subItem.mode;
+                  w2ui.Layout_main_toolbar.set('btn-edge-labels', { caption: 'Edge labels: ' + e.subItem.text });
                   if (svg) updateSVG();
                 }
             }
