@@ -12,6 +12,8 @@ from typing import Dict, Iterable, List
 
 log = logging.getLogger(__name__)
 
+ROOT_HAPLOGROUP = "mt-MRCA(RSRS)"
+
 
 def normalize_key(name: str) -> str:
     return name.strip().lower().replace(" ", "").replace("_", "")
@@ -53,6 +55,15 @@ def read_target_list(path: Path) -> List[str]:
     return targets
 
 
+def is_phylotree_note_row(haplogroup: str, level_text: str, parent: str) -> bool:
+    """跳过从 PhyloTree 页脚/说明误导出的非单倍群行。"""
+    if parent != ROOT_HAPLOGROUP or level_text != "0":
+        return False
+    if haplogroup in {"L0", "L1'2'3'4'5'6"}:
+        return False
+    return any(char.isspace() for char in haplogroup)
+
+
 def read_phylotree_table(path: Path) -> Dict[str, Dict[str, object]]:
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle, delimiter="\t")
@@ -77,10 +88,20 @@ def read_phylotree_table(path: Path) -> Dict[str, Dict[str, object]]:
             level_text = row[field_map["level"]].strip()
             parent = row[field_map["parent"]].strip()
             mutations = row[field_map["mutations"]].strip()
+            if is_phylotree_note_row(haplogroup, level_text, parent):
+                continue
             nodes[haplogroup] = {
                 "level": int(level_text),
                 "parent": parent,
                 "mutations": mutations,
+            }
+        if ROOT_HAPLOGROUP not in nodes and any(
+            str(node["parent"]) == ROOT_HAPLOGROUP for node in nodes.values()
+        ):
+            nodes[ROOT_HAPLOGROUP] = {
+                "level": -1,
+                "parent": "",
+                "mutations": "",
             }
     return nodes
 

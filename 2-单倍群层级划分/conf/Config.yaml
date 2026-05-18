@@ -2,10 +2,10 @@ tools:
   python: python3
 
 paths:
-  input_file: input/ID_Hap单倍群.tsv #? 输入文件路径，格式为TSV，包含样本ID和对应的单倍群信息
+  input_file: input/ID_Hap.tsv #? 输入文件路径，格式为TSV，包含样本ID和对应的单倍群信息
   output_dir: output
-  tree_index_file: data/phylotree_index.json
-  phylotree_table: data/phylotree_build17.tsv
+  tree_index_file: data/phylotree_index_withacc_v17.2.json
+  phylotree_table: data/phylotree_build_17.2.tsv
   input_correction: data/Haplogrep单倍群分型订正表.tsv
   llt_targets: data/目标_LLT.tsv
   llt_correction: data/错误纠正_LLT.tsv
