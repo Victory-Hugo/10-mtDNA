@@ -1,0 +1,2 @@
+n_samples_vcf	n_samples_in_group_file	n_samples_matched	n_samples_retained	n_pops_before_filter	n_pops_retained	min_pop_size_threshold	n_snps_raw	n_snps_retained	contig_name
+9257	9257	9257	9031	67	34	20	4176	4176	26

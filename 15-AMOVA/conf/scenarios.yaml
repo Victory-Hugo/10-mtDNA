@@ -1,0 +1,34 @@
+# =====================================================================
+# AMOVA 分析场景配置
+# 每个场景定义一种群体分组方案，pipeline 将为每个场景独立运行 AMOVA
+# =====================================================================
+#
+# 字段说明：
+#   name        - 场景唯一标识（用于输出文件命名）
+#   label       - 人类可读的场景描述（用于 Markdown 表格）
+#   group_file  - 分组文件路径（相对于 base_dir）
+#   id_col      - 分组文件中样本 ID 列名
+#   pop_col     - 分组文件中种群（小级别）列名
+#   group_col   - 分组文件中大组（超级分组）列名；null = 2级 AMOVA（无超级分组）
+#   subset_col  - 用于子集筛选的列名；null = 不筛选
+#   subset_vals - 保留的子集值列表（与 subset_col 配合使用）；null = 保留全部
+# =====================================================================
+
+scenarios:
+  - name: "all_pops"
+    label: "All Populations"
+    group_file: "input/2-group.tsv"
+    id_col: "ID"
+    pop_col: "Group_small" #? 最常用是Population_Province列
+    group_col: null
+    subset_col: null
+    subset_vals: null
+
+  - name: "ethnic_groups"
+    label: "Ethnic population groups"
+    group_file: "input/1-group.tsv"
+    id_col: "ID"
+    pop_col: "Group_small"  #? 最常用是Population_Province列
+    group_col: "Group_big"  #? 比Population_Province列更高一级的分组列
+    subset_col: null
+    subset_vals: null

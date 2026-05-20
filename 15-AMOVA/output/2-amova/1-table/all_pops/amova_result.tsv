@@ -1,0 +1,2 @@
+n_pops	n_groups	n_total	two_level	ssd_total	ssd_within	ssd_among_pops	ssd_among_groups	df_among_groups	df_among_pops	df_within	va	vb	vc	pct_among_groups	pct_among_pops	pct_within	fst	fsc	fct	p_value	n_perm	name	label
+34	1	9031	True	376181.51722382207	373915.8279318671	2265.689291954972	0.0	0	33	8997	0.0	0.11325968567835848	41.56005645569269	0.0	0.2717798729866863	99.7282201270133	0.002717798729866863			0.000999000999000999	1000	all_pops	All Populations

@@ -1,0 +1,41 @@
+# =====================================================================
+# AMOVA Pipeline — 配置文件
+# 所有路径均支持：绝对路径 / 相对路径（相对于 project.base_dir）
+# =====================================================================
+
+project:
+  base_dir: "/mnt/f/OneDrive/文档（科研）/脚本/Download/10-mtDNA/15-AMOVA"  # 项目根目录
+  input_vcf: "input/Altaic_本次研究_chrM.vcf.gz"                             # 输入VCF文件
+  input_scenarios: "conf/scenarios.yaml"                                      # 分析场景配置文件
+  contig_name: "26"                                                            # mtDNA在VCF中的染色体名（PLINK编码）
+
+# --------------------------------------------------------------------- #
+# 目录结构：相对路径默认相对于 project.base_dir                         #
+# --------------------------------------------------------------------- #
+paths:
+  python_dir: "python"                                                    # Python模块目录
+  helper_dir: "script"                                                    # Shell辅助脚本目录
+  temp_dir: "temp"                                                        # 临时目录根目录
+  log_dir: "log"                                                          # 日志目录
+  output_dir: "output"                                                    # 输出根目录
+  output_step1_table: "output/1-parse_vcf/1-table"                       # 步骤1：VCF解析输出
+  temp_step1: "temp/1-parse_vcf"                                         # 步骤1临时目录
+  output_step2_table: "output/2-amova/1-table"                           # 步骤2：AMOVA结果输出
+  output_step2_report: "output/2-amova/3-report"                         # 步骤2：Markdown报告输出
+
+# --------------------------------------------------------------------- #
+# 工具路径：集中管理解释器、二进制和环境                                 #
+# --------------------------------------------------------------------- #
+tools:
+  conda_bin: "/home/luolintao/miniconda3/condabin/conda"                 # conda可执行文件
+  python_bin: "/home/luolintao/miniconda3/envs/BigLin/bin/python3"       # Python解释器（BigLin环境）
+
+# --------------------------------------------------------------------- #
+# 运行参数：统一放线程数、阈值、置换次数等                               #
+# --------------------------------------------------------------------- #
+runtime:
+  min_pop_size: 20             # 最小种群样本量（<此值的种群被排除）
+  permutation_n: 1000          # 置换检验次数
+  random_seed: 42              # 随机数种子（保证可复现）
+  n_jobs: 4                    # 并行线程数（1=串行，可调大加速置换检验）
+  overwrite: true              # 是否覆盖已有输出
