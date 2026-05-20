@@ -4,6 +4,8 @@
 """
 
 import argparse
+import hashlib
+import json
 import logging
 from pathlib import Path
 
@@ -54,6 +56,35 @@ def _load_scenarios(scenarios_path: str) -> list[dict]:
     if not scenarios:
         raise ValueError(f"scenarios.yaml 中未找到任何场景: {scenarios_path}")
     return scenarios
+
+
+def _compute_scenario_key(
+    step1_key: str,
+    scenario: dict,
+    permutation_n: int,
+    scene_seed: int,
+) -> str:
+    """
+    计算单个场景的缓存指纹。
+
+    组成：Step1 指纹 + 场景定义（含分组文件路径/列名/subset 等全部字段）
+          + 置换次数 + 本场景随机种子。
+    任意一项变化均会导致缓存失效，触发重新计算。
+    """
+    src = json.dumps(
+        {
+            "step1_key": step1_key,
+            "scenario": scenario,
+            "permutation_n": permutation_n,
+            "scene_seed": scene_seed,
+        },
+        sort_keys=True,
+        ensure_ascii=False,
+    )
+    return hashlib.md5(src.encode()).hexdigest()
+
+
+_SCENARIO_CACHE_FILENAME = ".amova_cache"
 
 
 def _build_group_labels(
@@ -180,9 +211,14 @@ def run(
     random_seed: int,
     overwrite: bool = True,
     n_jobs: int = 1,
+    step1_key: str = "",
 ) -> dict:
     """
     遍历所有场景，逐一运行 AMOVA 并保存结果。
+
+    断点续跑：每个场景独立维护缓存键（.amova_cache），
+    由 step1_key + 场景定义 + 置换参数共同决定。
+    overwrite=False 时命中缓存则跳过；overwrite=True 时强制重算并刷新缓存。
 
     Args:
         freq_matrix_path — 步骤1产出的 .npz 文件
@@ -193,6 +229,8 @@ def run(
         permutation_n    — 置换检验次数
         random_seed      — 随机种子（各场景种子递增，保证独立性）
         overwrite        — 是否覆盖已有结果
+        n_jobs           — 置换检验并行线程数
+        step1_key        — Step1 输入指纹（由 pipeline.sh 传入）
 
     Returns:
         {"n_scenarios": int, "results": [per-scenario-dict]}
@@ -217,15 +255,30 @@ def run(
     for idx, scenario in enumerate(scenarios):
         name = scenario["name"]
         label = scenario.get("label", name)
+        scene_seed = random_seed + idx
         log.info("═══ 场景 %d/%d: %s ═══", idx + 1, len(scenarios), label)
 
         out_dir = out_root / name
         result_path = out_dir / "amova_result.tsv"
+        cache_file = out_dir / _SCENARIO_CACHE_FILENAME
 
-        if result_path.exists() and not overwrite:
-            log.info("跳过（已存在）: %s", result_path)
-            results_summary.append({"name": name, "status": "skipped"})
+        # ── 缓存命中检查 ──────────────────────────────────────────────────────
+        scenario_key = _compute_scenario_key(step1_key, scenario, permutation_n, scene_seed)
+
+        if (
+            not overwrite
+            and result_path.exists()
+            and cache_file.exists()
+            and cache_file.read_text().strip() == scenario_key
+        ):
+            log.info("缓存命中，跳过场景: %s", name)
+            results_summary.append({"name": name, "status": "cache_hit"})
             continue
+
+        if not overwrite and result_path.exists() and not (
+            cache_file.exists() and cache_file.read_text().strip() == scenario_key
+        ):
+            log.info("缓存失效（场景定义或参数已变更），重新计算: %s", name)
 
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -244,8 +297,7 @@ def run(
         )
         log.info("过滤后种群数: %d，样本数: %d", len(pop_names), int(pop_sizes.sum()))
 
-        # 3. 运行 AMOVA（每个场景使用不同的种子保证独立性）
-        scene_seed = random_seed + idx
+        # 3. 运行 AMOVA
         result = _AMOVA_CORE.run_amova(
             pop_freq=freq_matrix,
             pop_sizes=pop_sizes,
@@ -259,9 +311,10 @@ def run(
         result["name"] = name
         result["label"] = label
 
-        # 4. 保存结果 TSV
+        # 4. 保存结果 TSV 并更新缓存键
         df_result = pd.DataFrame([result])
         df_result.to_csv(result_path, sep="\t", index=False)
+        cache_file.write_text(scenario_key)
         log.info("已保存结果: %s", result_path)
 
         results_summary.append({"name": name, "status": "completed", "fst": result["fst"]})
@@ -296,6 +349,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="是否覆盖已有结果（1=是，0=否，默认: 1）")
     p.add_argument("--n-jobs", type=int, default=1,
                    help="置换检验并行线程数（默认: 1，建议设为 CPU 核心数）")
+    p.add_argument("--step1-key", default="",
+                   help="Step1 输入指纹（由 pipeline.sh 传入，用于场景缓存）")
     return p
 
 
@@ -315,6 +370,7 @@ def main(argv: list[str] | None = None) -> int:
         random_seed=args.random_seed,
         overwrite=bool(args.overwrite),
         n_jobs=args.n_jobs,
+        step1_key=args.step1_key,
     )
     return 0
 
